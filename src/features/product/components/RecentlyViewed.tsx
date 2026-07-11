@@ -3,7 +3,9 @@ import { useHydrated } from '@/shared/hooks/useHydrated';
 import { useRecentlyViewedStore } from '../store/recently-viewed.store';
 import { ProductGrid } from '@/features/shop/components/ProductGrid';
 
-export function RecentlyViewed({ currentId }: { currentId: string }) {
+import { cn } from '@/shared/utils/cn';
+
+export function RecentlyViewed({ currentId, className }: { currentId?: string; className?: string }) {
   const isHydrated = useHydrated();
   const viewedProducts = useRecentlyViewedStore((state) => state.viewedProducts);
   
@@ -15,7 +17,7 @@ export function RecentlyViewed({ currentId }: { currentId: string }) {
   if (filteredProducts.length === 0) return null;
 
   return (
-    <section className="mt-20 border-t border-border pt-12">
+    <section className={cn("mt-20 border-t border-border pt-12", className)}>
       <h2 className="mb-8 font-(family-name:--font-display) text-2xl font-semibold text-brand-primary">Recently Viewed</h2>
       <ProductGrid products={filteredProducts} />
     </section>

@@ -4,6 +4,7 @@ import { ArrowRight, Banknote, ShieldCheck, Truck } from 'lucide-react';
 import { SITE } from '@/config/site.config';
 import { CATEGORIES } from '@/shared/data/categories.data';
 import { FeaturedProducts } from '@/features/shop';
+import { RecentlyViewed } from '@/features/product/components/RecentlyViewed';
 
 export default function HomePage() {
   return (
@@ -119,6 +120,9 @@ export default function HomePage() {
           <FeaturedProducts />
         </div>
       </section>
+
+      {/* ── Recently viewed ──────────────────────────────── */}
+      <RecentlyViewed className="mx-auto max-w-container px-4 lg:px-8 pb-16" />
 
       {/* ── SEO content ──────────────────────────────────── */}
       <section className="border-t border-border bg-brand-blush/30">
