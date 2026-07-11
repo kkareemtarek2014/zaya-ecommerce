@@ -10,6 +10,8 @@ const HELP_LINKS = [
   { href: '/bride/custom', label: 'Bridal Requests' },
   { href: '/account', label: 'My Account' },
   { href: '/account/orders', label: 'Track My Order' },
+  { href: '/about', label: 'About Us' },
+  { href: '/contact', label: 'Contact Us' },
 ];
 
 const LEGAL_LINKS = [

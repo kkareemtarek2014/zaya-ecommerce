@@ -15,6 +15,8 @@ const NAV_LINKS = [
   { href: '/shop', label: 'Shop' },
   { href: '/shop/jewelry', label: 'Jewelry' },
   { href: '/shop/bags', label: 'Bags' },
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
 ] as const;
 
 export function Header() {
