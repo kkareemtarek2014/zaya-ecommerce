@@ -1,0 +1,39 @@
+:root {
+  /* ─── Zeena brand palette ───────────────────────────────
+     Feminine, warm, premium. Edit here → whole site updates. */
+
+  /* Brand colours */
+  --color-brand-primary:   #b4536a;  /* Deep rose — CTAs, links, active states */
+  --color-brand-secondary: #8c3d52;  /* Darker rose — hover states */
+  --color-brand-accent:    #c9a24b;  /* Soft gold — badges, highlights */
+  --color-brand-blush:     #f7e9e6;  /* Blush wash — soft section backgrounds */
+
+  /* Surfaces */
+  --color-surface:         #fdfaf7;  /* Warm cream page background */
+  --color-surface-raised:  #ffffff;  /* Cards, modals, drawers */
+  --color-surface-overlay: #2b2226;  /* Backdrop (used at opacity) */
+
+  /* Text */
+  --color-text-primary:    #2b2226;  /* Warm charcoal — body copy, headings */
+  --color-text-secondary:  #6b5a60;  /* Subtitles, labels */
+  --color-text-muted:      #a4949a;  /* Placeholders, captions */
+  --color-text-inverse:    #ffffff;  /* Text on dark/coloured backgrounds */
+
+  /* Borders */
+  --color-border:          #eddfd9;  /* Default dividers, input borders */
+  --color-border-strong:   #ddc9c1;  /* Stronger separators */
+
+  /* Status */
+  --color-status-success:  #4e7d5b;
+  --color-status-warning:  #b0802f;
+  --color-status-error:    #b23a48;
+  --color-status-info:     #4a6b8a;
+
+  /* Typography */
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-heading), Georgia, serif;
+
+  /* Border radius */
+  --radius:    0.5rem;    /* inputs, buttons */
+  --radius-lg: 0.875rem;  /* cards, modals */
+}

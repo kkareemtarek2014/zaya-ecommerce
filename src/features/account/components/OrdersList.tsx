@@ -1,0 +1,58 @@
+'use client';
+
+import Link from 'next/link';
+import { Package } from 'lucide-react';
+import { formatEGP } from '@/shared/utils/price';
+import { Badge, Button } from '@/shared/components/ui';
+import { useHydrated } from '@/shared/hooks/useHydrated';
+import { useOrdersStore } from '@/features/order';
+
+export function OrdersList() {
+  const mounted = useHydrated();
+  const orders = useOrdersStore((s) => s.orders);
+
+  if (!mounted) return null;
+
+  if (orders.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-16 text-center">
+        <Package className="size-12 text-border-strong" />
+        <p className="text-sm text-text-secondary">No orders yet.</p>
+        <Link href="/shop">
+          <Button variant="outline">Start shopping</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="space-y-3">
+      {orders.map((order) => (
+        <li key={order.id}>
+          <Link
+            href={`/order/${order.id}`}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-lg) border border-border bg-surface-raised p-4 transition-colors hover:border-brand-primary/40"
+          >
+            <div>
+              <p className="text-sm font-semibold">{order.id}</p>
+              <p className="text-xs text-text-muted">
+                {new Date(order.createdAt).toLocaleDateString('en-EG', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}{' '}
+                · {order.items.length} item{order.items.length > 1 ? 's' : ''}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge tone="accent">Cash on delivery</Badge>
+              <span className="text-sm font-semibold text-brand-primary">
+                {formatEGP(order.total)}
+              </span>
+            </div>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}

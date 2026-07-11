@@ -1,0 +1,9 @@
+export {
+  useCartStore,
+  selectCartCount,
+  selectCartSubtotal,
+  type CartItem,
+} from './store/cart.store';
+export { CartView } from './components/CartView';
+export { CartItemRow } from './components/CartItemRow';
+export { CartDrawer } from './components/CartDrawer';

@@ -1,0 +1,49 @@
+'use client';
+
+import Link from 'next/link';
+import { Sparkles } from 'lucide-react';
+import { CATEGORIES } from '@/shared/data/categories.data';
+import { useProducts } from '../hooks/useProducts';
+import { CategoryPills } from './CategoryPills';
+import { ProductGrid } from './ProductGrid';
+
+export function ShopView({ category }: { category?: string }) {
+  const { data, isLoading } = useProducts(category);
+  const categoryName = category
+    ? (CATEGORIES.find((c) => c.slug === category)?.name ?? 'Shop')
+    : 'All Products';
+
+  return (
+    <div className="mx-auto max-w-container px-4 py-10 lg:px-8">
+      <p className="text-xs font-medium uppercase tracking-[0.25em] text-brand-accent">
+        Shop
+      </p>
+      <h1 className="mt-1 font-(family-name:--font-display) text-3xl font-semibold lg:text-4xl">
+        {categoryName}
+      </h1>
+
+      <div className="mt-6">
+        <CategoryPills active={category} />
+      </div>
+
+      {category === 'bride' && (
+        <Link
+          href="/bride/custom"
+          className="mt-6 flex items-center gap-3 rounded-(--radius) border border-brand-primary/30 bg-brand-blush/40 px-5 py-4 transition-colors hover:bg-brand-blush"
+        >
+          <Sparkles className="size-5 shrink-0 text-brand-primary" />
+          <span className="text-sm text-text-secondary">
+            Looking for something custom for your wedding?{' '}
+            <span className="font-medium text-brand-primary">
+              Send us a photo — we reply within 2 days.
+            </span>
+          </span>
+        </Link>
+      )}
+
+      <div className="mt-8">
+        <ProductGrid products={data ?? []} isLoading={isLoading} />
+      </div>
+    </div>
+  );
+}

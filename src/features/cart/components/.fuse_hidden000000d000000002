@@ -1,0 +1,80 @@
+'use client';
+
+import Link from 'next/link';
+import { ShoppingBag } from 'lucide-react';
+import { formatEGP } from '@/shared/utils/price';
+import { FREE_SHIPPING_THRESHOLD } from '@/config/site.config';
+import { Button } from '@/shared/components/ui';
+import { useHydrated } from '@/shared/hooks/useHydrated';
+import {
+  selectCartSubtotal,
+  useCartStore,
+} from '../store/cart.store';
+import { CartItemRow } from './CartItemRow';
+
+export function CartView() {
+  // Avoid hydration mismatch: the persisted cart only exists on the client.
+  const mounted = useHydrated();
+  const items = useCartStore((s) => s.items);
+  const subtotal = useCartStore(selectCartSubtotal);
+
+  if (!mounted) return null;
+
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24 text-center">
+        <ShoppingBag className="size-12 text-border-strong" />
+        <p className="text-lg text-text-secondary">Your bag is empty.</p>
+        <Link href="/shop">
+          <Button variant="outline">Start shopping</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const remainingForFree = FREE_SHIPPING_THRESHOLD - subtotal;
+
+  return (
+    <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
+      <div>
+        {items.map((item) => (
+          <CartItemRow key={item.productId} item={item} />
+        ))}
+      </div>
+
+      <aside className="h-fit rounded-(--radius-lg) border border-border bg-surface-raised p-6">
+        <h2 className="font-(family-name:--font-display) text-xl font-semibold">
+          Order Summary
+        </h2>
+
+        <dl className="mt-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-text-secondary">Subtotal</dt>
+            <dd className="font-medium">{formatEGP(subtotal)}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-text-secondary">Shipping</dt>
+            <dd className="text-text-muted">Calculated at checkout</dd>
+          </div>
+        </dl>
+
+        {remainingForFree > 0 ? (
+          <p className="mt-4 rounded-(--radius) bg-brand-blush px-4 py-3 text-xs text-brand-secondary">
+            Add {formatEGP(remainingForFree)} more to get{' '}
+            <strong>free shipping</strong>.
+          </p>
+        ) : (
+          <p className="mt-4 rounded-(--radius) bg-status-success/10 px-4 py-3 text-xs text-status-success">
+            You’ve unlocked <strong>free shipping</strong>!
+          </p>
+        )}
+
+        <Link href="/checkout" className="mt-5 block">
+          <Button fullWidth size="lg">
+            Proceed to checkout
+          </Button>
+        </Link>
+      </aside>
+    </div>
+  );
+}
