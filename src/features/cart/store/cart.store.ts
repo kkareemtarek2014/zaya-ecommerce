@@ -14,6 +14,7 @@ export interface CartItem {
 }
 
 interface CartState {
+  items: CartItem[];
   isOpen: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
