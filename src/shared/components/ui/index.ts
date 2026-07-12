@@ -5,3 +5,6 @@ export { Badge } from './Badge';
 export { QuantityStepper } from './QuantityStepper';
 export { Drawer } from './Drawer';
 export { Loader } from './Loader';
+export { WhatsAppButton } from './WhatsAppButton';
+export { WishlistButton } from './WishlistButton';
+

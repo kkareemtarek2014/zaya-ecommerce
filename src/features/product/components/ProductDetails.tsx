@@ -7,7 +7,12 @@ import { useProduct } from '@/features/shop';
 import { useCartStore } from '@/features/cart';
 import { formatEGP, getSellPrice } from '@/shared/utils/price';
 import { FREE_SHIPPING_THRESHOLD } from '@/config/site.config';
-import { Badge, Button, QuantityStepper } from '@/shared/components/ui';
+import {
+  Badge,
+  Button,
+  QuantityStepper,
+  WishlistButton,
+} from '@/shared/components/ui';
 import { ProductGallery } from './ProductGallery';
 import { useRecentlyViewedStore } from '../store/recently-viewed.store';
 import { ProductReviews } from './ProductReviews';
@@ -123,6 +128,11 @@ export function ProductDetails({ id }: { id: string }) {
                 'Sold out'
               )}
             </Button>
+            <WishlistButton
+              productId={product.id}
+              productName={product.name}
+              className="size-11 border border-border-strong shadow-none hover:border-brand-primary"
+            />
           </div>
 
           <ul className="mt-4 space-y-3 rounded-(--radius-lg) bg-brand-blush/60 p-5 text-sm text-text-secondary">

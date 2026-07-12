@@ -1,8 +1,21 @@
 import { Sparkles } from 'lucide-react';
+import { cn } from '@/shared/utils/cn';
 
-export function Loader() {
+interface LoaderProps {
+  /** Full-height (default) centres in a 60vh area; set false for inline use. */
+  fullscreen?: boolean;
+  className?: string;
+}
+
+export function Loader({ fullscreen = true, className }: LoaderProps = {}) {
   return (
-    <div className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-6">
+    <div
+      className={cn(
+        'flex w-full flex-col items-center justify-center gap-6',
+        fullscreen && 'min-h-[60vh]',
+        className,
+      )}
+    >
       <div className="relative flex h-24 w-24 items-center justify-center">
         {/* Outer rotating ring (jewelry/bracelet aesthetic) */}
         <div className="absolute inset-0 rounded-full border-y-2 border-brand-primary/40 animate-[spin_3s_linear_infinite]"></div>

@@ -5,44 +5,61 @@ import Link from 'next/link';
 import { Sparkles, Search } from 'lucide-react';
 import { CATEGORIES } from '@/shared/data/categories.data';
 import { useProducts } from '../hooks/useProducts';
+import { sortProducts, DEFAULT_SORT, type SortKey } from '../utils/sortProducts';
 import { CategoryPills } from './CategoryPills';
 import { ProductGrid } from './ProductGrid';
+import { ProductSort } from './ProductSort';
 
 export function ShopView({ category }: { category?: string }) {
   const { data, isLoading } = useProducts(category);
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [sortBy, setSortBy] = useState<SortKey>(DEFAULT_SORT);
+
   const categoryName = category
     ? (CATEGORIES.find((c) => c.slug === category)?.name ?? 'Shop')
     : 'All Products';
 
-  const filteredData = useMemo(() => {
+  const visibleProducts = useMemo(() => {
     if (!data) return [];
-    if (!searchQuery.trim()) return data;
-    const query = searchQuery.toLowerCase();
-    return data.filter((product) => product.name.toLowerCase().includes(query));
-  }, [data, searchQuery]);
+    const query = searchQuery.trim().toLowerCase();
+    const filtered = query
+      ? data.filter((product) => product.name.toLowerCase().includes(query))
+      : data;
+    return sortProducts(filtered, sortBy);
+  }, [data, searchQuery, sortBy]);
 
   return (
     <div className="mx-auto max-w-container px-4 py-10 lg:px-8">
       <p className="text-xs font-medium uppercase tracking-[0.25em] text-brand-accent">
         Shop
       </p>
-      <h1 className="mt-1 font-(family-name:--font-display) text-3xl font-semibold lg:text-4xl">
+      <h1 className="mt-1 font-display text-3xl font-semibold lg:text-4xl">
         {categoryName}
       </h1>
 
-      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mt-6 flex flex-col gap-4">
         <CategoryPills active={category} />
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-10 w-full rounded-(--radius) border border-border bg-surface-raised pl-9 pr-4 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-11 w-full rounded-(--radius) border border-border bg-surface-raised pl-9 pr-4 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-brand-primary focus:ring-1 focus:ring-brand-primary"
+            />
+          </div>
+          <div className="flex items-center gap-2 sm:w-auto">
+            <span className="hidden shrink-0 text-sm text-text-secondary sm:inline">
+              Sort by
+            </span>
+            <ProductSort
+              value={sortBy}
+              onChange={setSortBy}
+              className="w-full sm:w-52"
+            />
+          </div>
         </div>
       </div>
 
@@ -62,7 +79,7 @@ export function ShopView({ category }: { category?: string }) {
       )}
 
       <div className="mt-8">
-        <ProductGrid products={filteredData} isLoading={isLoading} />
+        <ProductGrid products={visibleProducts} isLoading={isLoading} />
       </div>
     </div>
   );

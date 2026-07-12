@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150x150/fdfbf7/c4a484?text=Z" alt="Zeena Logo" width="120" height="120" />
-  <h1>✨ Zeena — Premium Women's Accessories ✨</h1>
+  <img src="https://via.placeholder.com/150x150/fdfbf7/c4a484?text=Z" alt="Zaya Logo" width="120" height="120" />
+  <h1>✨ Zaya — Premium Women's Accessories ✨</h1>
   <p><strong>Curated women's accessories delivered anywhere in Egypt with Cash on Delivery.</strong></p>
   <p>Built as a sleek, feature-based Next.js storefront, perfectly engineered for scalability, stunning UI/UX, and robust performance.</p>
 </div>
@@ -31,19 +31,19 @@ Make sure you have Node.js (v18+) installed.
 ### Installation & Run
 ```bash
 # 1. Install dependencies
-npm install
+pnpm install
 
 # 2. Run the development server
-npm run dev
+pnpm dev
 ```
 Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Quality Checks
 Run these commands to verify code quality before deploying:
 ```bash
-npm run build      # Test production build
-npm run typecheck  # Verify TypeScript types
-npm run lint       # Run ESLint
+pnpm build      # Test production build
+pnpm typecheck  # Verify TypeScript types
+pnpm lint       # Run ESLint
 ```
 
 ---
@@ -139,5 +139,5 @@ Currently, the store reads from a robust dummy data layer (`src/shared/data/`). 
 ---
 
 <div align="center">
-  <p>Crafted with elegance for Zeena.</p>
+  <p>Crafted with elegance for Zaya.</p>
 </div>

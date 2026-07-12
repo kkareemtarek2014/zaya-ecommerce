@@ -75,6 +75,7 @@ export function CheckoutForm() {
       subtotal,
       shipping: getShippingCost(values.governorate, subtotal),
       total: subtotal + getShippingCost(values.governorate, subtotal),
+      note: useCartStore.getState().note,
     });
     clearCart();
     router.push(`/order/${order.id}`);
@@ -89,7 +90,7 @@ export function CheckoutForm() {
       {/* ── Delivery details ────────────────────────────── */}
       <div className="space-y-8">
         <section className="space-y-4">
-          <h2 className="font-(family-name:--font-display) text-xl font-semibold">
+          <h2 className="font-display text-xl font-semibold">
             Delivery Details
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -146,15 +147,15 @@ export function CheckoutForm() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="font-(family-name:--font-display) text-xl font-semibold">
+          <h2 className="font-display text-xl font-semibold">
             Payment
           </h2>
-          <label className="flex cursor-pointer items-center gap-4 rounded-(--radius-lg) border border-brand-primary bg-brand-blush/50 p-4">
+          <label className="flex cursor-pointer items-center gap-4 rounded-lg border border-brand-primary bg-brand-blush/50 p-4">
             <input
               type="radio"
               value="cod"
               defaultChecked
-              className="size-4 accent-(--color-brand-primary)"
+              className="size-4 accent-brand-primary"
               {...register('paymentMethod')}
             />
             <Banknote className="size-5 text-brand-primary" />
@@ -169,8 +170,8 @@ export function CheckoutForm() {
       </div>
 
       {/* ── Order summary ───────────────────────────────── */}
-      <aside className="h-fit rounded-(--radius-lg) border border-border bg-surface-raised p-6">
-        <h2 className="font-(family-name:--font-display) text-xl font-semibold">
+      <aside className="h-fit rounded-lg border border-border bg-surface-raised p-6">
+        <h2 className="font-display text-xl font-semibold">
           Your Order
         </h2>
 

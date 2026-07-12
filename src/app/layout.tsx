@@ -4,6 +4,7 @@ import { Jost, Playfair_Display } from 'next/font/google';
 import { SITE } from '@/config/site.config';
 import { Header } from '@/shared/components/layout/Header';
 import { Footer } from '@/shared/components/layout/Footer';
+import { WhatsAppButton } from '@/shared/components/ui';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
+          <WhatsAppButton />
         </Providers>
       </body>
     </html>

@@ -3,26 +3,32 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, ShoppingBag, User, X } from 'lucide-react';
+import { Menu, User, X } from 'lucide-react';
 import { SITE } from '@/config/site.config';
 import { cn } from '@/shared/utils/cn';
-import { useHydrated } from '@/shared/hooks/useHydrated';
+import { useFeature } from '@/shared/contexts/FeatureContext';
 import { CartDrawer } from '@/features/cart';
 import { SearchButton } from '@/features/product-search';
+import type { FeatureKey } from '@/config/features.config';
 
-const NAV_LINKS = [
+const NAV_LINKS: { href: string; label: string; feature?: FeatureKey }[] = [
   { href: '/', label: 'Home' },
-  { href: '/shop', label: 'Shop' },
-  { href: '/shop/jewelry', label: 'Jewelry' },
-  { href: '/shop/bags', label: 'Bags' },
+  { href: '/shop', label: 'Shop', feature: 'shop' },
+  { href: '/shop/jewelry', label: 'Jewelry', feature: 'shop' },
+  { href: '/shop/bags', label: 'Bags', feature: 'shop' },
   { href: '/about', label: 'About' },
   { href: '/contact', label: 'Contact' },
-] as const;
+];
 
 export function Header() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const mounted = useHydrated();
+  const isShopEnabled = useFeature('shop');
+  const isSearchEnabled = useFeature('product-search');
+
+  const navLinks = NAV_LINKS.filter(
+    (link) => !link.feature || isShopEnabled,
+  );
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
@@ -35,7 +41,7 @@ export function Header() {
         </Link>
 
         <nav aria-label="Main navigation" className="hidden gap-8 md:flex">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -52,10 +58,10 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <SearchButton />
-          
+          {isSearchEnabled && <SearchButton />}
+
           <Link
-            href="/login"
+            href="/account"
             aria-label="User account"
             className="flex size-10 items-center justify-center rounded-full text-text-primary transition-colors hover:bg-brand-blush"
           >
@@ -80,7 +86,7 @@ export function Header() {
           aria-label="Mobile navigation"
           className="border-t border-border bg-surface-raised md:hidden"
         >
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}

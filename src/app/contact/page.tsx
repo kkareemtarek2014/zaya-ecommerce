@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { Mail, MapPin, Phone, MessageCircle } from 'lucide-react';
+import { Mail, MessageCircle } from 'lucide-react';
 import { SITE } from '@/config/site.config';
 
 export const metadata: Metadata = {

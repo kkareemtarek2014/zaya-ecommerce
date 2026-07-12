@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { OrderConfirmation } from '@/features/order';
+import { OrderDetails } from '@/features/order';
 
 export const metadata: Metadata = {
-  title: 'Order Confirmed',
+  title: 'Order Details',
   robots: { index: false, follow: false },
 };
 
@@ -14,7 +14,7 @@ export default async function OrderPage({ params }: Props) {
   const { id } = await params;
   return (
     <div className="mx-auto max-w-container px-4 py-12 lg:px-8">
-      <OrderConfirmation orderId={id} />
+      <OrderDetails orderId={id} />
     </div>
   );
 }

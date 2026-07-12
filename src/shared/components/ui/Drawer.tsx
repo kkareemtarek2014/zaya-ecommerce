@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useId, type ReactNode } from 'react';
+import { useRef, useId, useState, useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/shared/utils/cn';
@@ -22,12 +22,17 @@ export interface DrawerProps {
 export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useFocusTrap(containerRef, isOpen);
   useScrollLock(isOpen);
   useEscapeKey(isOpen, onClose);
 
-  if (typeof document === 'undefined') return null;
+  if (!mounted || typeof document === 'undefined') return null;
 
   return createPortal(
     <div
@@ -61,7 +66,7 @@ export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2
             id={titleId}
-            className="font-(family-name:--font-display) text-xl font-semibold"
+            className="font-display text-xl font-semibold"
           >
             {title}
           </h2>

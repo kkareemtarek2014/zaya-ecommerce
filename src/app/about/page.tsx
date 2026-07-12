@@ -55,7 +55,7 @@ export default function AboutPage() {
               The Zaya Promise
             </h2>
             <p className="mt-3 text-text-secondary leading-relaxed">
-              We understand that shopping online for accessories requires trust. That's why we offer a seamless shopping experience with cash on delivery across all governorates in Egypt. Our customer service team is always ready to ensure you are 100% satisfied with your purchase.
+              We understand that shopping online for accessories requires trust. That&apos;s why we offer a seamless shopping experience with cash on delivery across all governorates in Egypt. Our customer service team is always ready to ensure you are 100% satisfied with your purchase.
             </p>
           </section>
 

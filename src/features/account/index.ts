@@ -9,3 +9,5 @@ export {
   useAddressesStore,
   type SavedAddress,
 } from './store/addresses.store';
+export { MyWallet } from './components/MyWallet';
+export { useWalletStore } from './store/wallet.store';

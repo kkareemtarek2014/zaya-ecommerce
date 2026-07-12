@@ -1,4 +1,4 @@
-# Zeena — Claude Code Project Brain
+# Zaya — Claude Code Project Brain
 
 > Read this file at the start of EVERY session before touching code.
 
@@ -6,7 +6,7 @@
 
 ## What This Is
 
-**Zeena** (زينة, "adornment") is a women's accessories e-commerce storefront for Egypt, targeting Class A/B customers. Business model: dropshipping — products sourced from Temu/Shein-style suppliers, sold with a 20–30% margin, delivered across Egypt with cash on delivery.
+**Zaya** (زينة, "adornment") is a women's accessories e-commerce storefront for Egypt, targeting Class A/B customers. Business model: dropshipping — products sourced from Temu/Shein-style suppliers, sold with a 20–30% margin, delivered across Egypt with cash on delivery.
 
 Frontend only for now. An admin dashboard + real backend come later.
 
@@ -32,7 +32,7 @@ Frontend only for now. An admin dashboard + real backend come later.
 - Tailwind CSS **v4** (CSS-first config — tokens in `src/styles/tokens.css`, mapped via `@theme inline` in `src/app/globals.css`; there is NO tailwind.config.ts)
 - Zustand (client state, persisted) + React Query (server state)
 - react-hook-form + Zod v4 on every form
-- lucide-react icons · npm
+- lucide-react icons · pnpm
 
 ## Architecture Rules — NON-NEGOTIABLE
 
@@ -51,9 +51,9 @@ Frontend only for now. An admin dashboard + real backend come later.
 | --- | --- | --- |
 | Shop/catalog | `features/shop/` | grid, category pills, services, React Query hooks |
 | Product details | `features/product/` | gallery + add to bag |
-| Cart | `features/cart/` | `cart.store.ts` (Zustand persist `zeena-cart`) |
+| Cart | `features/cart/` | `cart.store.ts` (Zustand persist `Zaya-cart`) |
 | Checkout | `features/checkout/` | Zod schema (Egyptian phone regex), shipping calc |
-| Orders | `features/order/` | client-side order log (`zeena-orders`), confirmation page |
+| Orders | `features/order/` | client-side order log (`Zaya-orders`), confirmation page |
 | Bridal custom | `features/bridal-custom/` | photo/video request form; replies promised ≤ 2 days; file itself NOT uploaded yet (needs backend) |
 
 ## Pages
@@ -74,9 +74,9 @@ Categories: jewelry, bags, hair, scarves, sunglasses, watches, **bride**.
 ## Verification (run after every change group)
 
 ```bash
-npm run build      # 0 errors
-npm run typecheck  # 0 errors
-npm run lint       # 0 errors (1 known benign warning: react-hooks/incompatible-library on RHF watch())
+pnpm build      # 0 errors
+pnpm typecheck  # 0 errors
+pnpm lint       # 0 errors (1 known benign warning: react-hooks/incompatible-library on RHF watch())
 ```
 
 ## Conventions

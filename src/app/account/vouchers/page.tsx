@@ -1,5 +1,4 @@
-import { Ticket, Copy, CheckCircle2 } from 'lucide-react';
-import { Button } from '@/shared/components/ui';
+import { Ticket } from 'lucide-react';
 
 export default function VouchersPage() {
   return (

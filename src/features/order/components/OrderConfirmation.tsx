@@ -1,0 +1,119 @@
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { CircleCheck } from 'lucide-react';
+import { formatEGP } from '@/shared/utils/price';
+import { getGovernorate } from '@/shared/data/governorates.data';
+import { Button } from '@/shared/components/ui';
+import { useHydrated } from '@/shared/hooks/useHydrated';
+import { useOrdersStore } from '../store/orders.store';
+
+export function OrderConfirmation({ orderId }: { orderId: string }) {
+  const mounted = useHydrated();
+  const order = useOrdersStore((s) => s.getOrder(orderId));
+
+  if (!mounted) return null;
+
+  if (!order) {
+    return (
+      <div className="py-24 text-center">
+        <p className="text-lg text-text-secondary">
+          We couldn’t find this order.
+        </p>
+        <Link
+          href="/shop"
+          className="mt-2 inline-block text-brand-primary underline underline-offset-4"
+        >
+          Back to shop
+        </Link>
+      </div>
+    );
+  }
+
+  const governorate = getGovernorate(order.address.governorate);
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <CircleCheck className="size-14 text-status-success" />
+        <h1 className="font-display text-3xl font-semibold">
+          Thank you, {order.address.fullName.split(' ')[0]}!
+        </h1>
+        <p className="text-text-secondary">
+          Your order <span className="font-medium">{order.id}</span> is
+          confirmed. We’ll call you on{' '}
+          <span className="font-medium">{order.address.phone}</span> to
+          arrange delivery.
+        </p>
+      </div>
+
+      <div className="mt-8 rounded-lg border border-border bg-surface-raised p-6">
+        <h2 className="font-display text-lg font-semibold">
+          Order Summary
+        </h2>
+
+        <ul className="mt-4 space-y-4 border-b border-border pb-5">
+          {order.items.map((item) => (
+            <li key={item.productId} className="flex items-center gap-4">
+              <div className="relative size-14 shrink-0 overflow-hidden rounded-(--radius) bg-brand-blush">
+                <Image
+                  src={item.image}
+                  alt={item.name}
+                  width={112}
+                  height={112}
+                  className="size-full object-cover"
+                />
+              </div>
+              <div className="flex-1 text-sm">
+                <p className="line-clamp-1 font-medium">{item.name}</p>
+                <p className="text-text-muted">Qty {item.quantity}</p>
+              </div>
+              <span className="text-sm font-medium">
+                {formatEGP(item.unitPrice * item.quantity)}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <dl className="mt-4 space-y-2 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-text-secondary">Subtotal</dt>
+            <dd>{formatEGP(order.subtotal)}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-text-secondary">
+              Shipping · {governorate?.name ?? order.address.governorate}
+            </dt>
+            <dd>{order.shipping === 0 ? 'Free' : formatEGP(order.shipping)}</dd>
+          </div>
+          <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
+            <dt>Total (cash on delivery)</dt>
+            <dd className="text-brand-primary">{formatEGP(order.total)}</dd>
+          </div>
+        </dl>
+
+        <div className="mt-5 rounded-(--radius) bg-brand-blush/60 p-4 text-sm text-text-secondary">
+          <p className="font-medium text-text-primary">Delivering to</p>
+          <p>
+            {order.address.street}, {order.address.city},{' '}
+            {governorate?.name ?? order.address.governorate}
+          </p>
+          {order.address.notes && (
+            <p className="mt-1 text-xs text-text-muted">
+              Note: {order.address.notes}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-8 text-center">
+        <Link href="/shop">
+          <Button variant="outline" size="lg">
+            Continue shopping
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}

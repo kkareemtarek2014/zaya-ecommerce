@@ -9,6 +9,7 @@ import { formatEGP } from '@/shared/utils/price';
 import { FREE_SHIPPING_THRESHOLD } from '@/config/site.config';
 import { Button, Drawer, QuantityStepper } from '@/shared/components/ui';
 import { useHydrated } from '@/shared/hooks/useHydrated';
+import { CartRecommendations } from './CartRecommendations';
 import {
   selectCartCount,
   selectCartSubtotal,
@@ -35,8 +36,10 @@ export function CartDrawer() {
   const removeItem = useCartStore((s) => s.removeItem);
   
   const [couponInput, setCouponInput] = useState('');
+  const [couponError, setCouponError] = useState<string | null>(null);
 
-  const remainingForFree = FREE_SHIPPING_THRESHOLD - subtotal;
+  const discountedSubtotal = subtotal - discount;
+  const remainingForFree = FREE_SHIPPING_THRESHOLD - discountedSubtotal;
 
   return (
     <>
@@ -121,6 +124,10 @@ export function CartDrawer() {
               ))}
             </div>
 
+            <div className="mt-4">
+              <CartRecommendations onNavigate={closeDrawer} />
+            </div>
+
             <div className="sticky bottom-0 -mx-5 mt-4 border-t border-border bg-surface-raised px-5 pb-2 pt-4">
               {remainingForFree > 0 ? (
                 <p className="mb-3 rounded-(--radius) bg-brand-blush px-3 py-2 text-xs text-brand-secondary">
@@ -137,18 +144,36 @@ export function CartDrawer() {
                 {couponCode ? (
                   <div className="flex items-center justify-between rounded-(--radius) bg-brand-blush px-3 py-2 text-sm">
                     <span className="font-medium text-brand-primary">Code: {couponCode}</span>
-                    <button type="button" onClick={removeCoupon} className="text-brand-secondary underline text-xs">Remove</button>
+                    <button type="button" onClick={() => { removeCoupon(); setCouponError(null); }} className="text-brand-secondary underline text-xs">Remove</button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      placeholder="Coupon Code (e.g. ZAYA10)" 
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value)}
-                      className="flex-1 rounded-(--radius) border border-border px-3 py-1.5 text-sm outline-none focus:border-brand-primary"
-                    />
-                    <Button variant="outline" size="sm" onClick={() => { applyCoupon(couponInput); setCouponInput(''); }}>Apply</Button>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Coupon Code (e.g. WELCOME10)" 
+                        value={couponInput}
+                        onChange={(e) => { setCouponInput(e.target.value); setCouponError(null); }}
+                        className="flex-1 rounded-(--radius) border border-border px-3 py-1.5 text-sm outline-none focus:border-brand-primary"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => { 
+                          if (!couponInput) return;
+                          const res = applyCoupon(couponInput); 
+                          if (res.success) {
+                            setCouponInput('');
+                            setCouponError(null);
+                          } else {
+                            setCouponError(res.error || 'Invalid code');
+                          }
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                    {couponError && <p className="text-xs text-status-error ml-1">{couponError}</p>}
                   </div>
                 )}
               </div>
