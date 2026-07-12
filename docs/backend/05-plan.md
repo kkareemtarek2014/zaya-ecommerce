@@ -94,8 +94,8 @@ The storefront migration (P0–P7) ships first. The admin dashboard is layered o
   (`DataTable`, `Pagination`, `Dialog`/`ConfirmDialog`, `Toast`, `Tabs`, `SearchInput`).
 - **P9 — Products & Categories CRUD + R2 images:** admin product/category APIs, list
   (search/filter/paginate), create/edit/delete, image upload/replace/delete.
-- **P10 — Orders & Users:** orders list/detail/status-transition; users list/view/edit/delete (with
-  last-admin/self guards).
+- **P10 — Orders & Users:** orders list/detail/status (one-step forward + cancel rules); users
+  list/view/edit/delete (self/last-admin guards). Bosta/Paymob admin deferred to P13–P14.
 - **P11 — Locations, Promos, Bridal, Settings:** governorates + shipping-zone fees, promo CRUD, bridal
   request review, settings page (margin 0.20–0.30 clamp). Pricing/shipping read effective settings.
 - **P12 — Dashboard stats + hardening:** `/api/admin/stats`, stat cards + sales chart + recent orders/

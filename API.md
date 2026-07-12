@@ -1,7 +1,7 @@
 # Zaya API
 
-Live **storefront** HTTP contract for the Cloudflare Worker (`zaya-ecommerce`).
-Admin APIs are planned — see [`docs/backend/08-admin-dashboard.md`](docs/backend/08-admin-dashboard.md).
+Live **storefront + admin catalog** HTTP contract for the Cloudflare Worker (`zaya-ecommerce`).
+Further admin modules: [`docs/backend/08-admin-dashboard.md`](docs/backend/08-admin-dashboard.md).
 Full design notes: [`docs/backend/03-api-contracts.md`](docs/backend/03-api-contracts.md).
 
 **Base URL:** https://zaya-ecommerce.mitchdesigns.workers.dev (or `http://127.0.0.1:8787` via `pnpm preview`).  
@@ -30,7 +30,9 @@ Every route returns:
 
 Writes are validated with Zod schemas from `src/shared/contracts/` (and feature schemas where reused). Handlers use `withHandler` → envelope mapping.
 
-**Secrets never serialized:** `basePrice` and `password_hash` / `passwordHash` stay server-only (`toProductDTO` / `toUserDTO`). Run `pnpm assert:no-secrets`.
+**Secrets never serialized on storefront:** `basePrice` and `password_hash` / `passwordHash` stay
+server-only (`toProductDTO` / `toUserDTO`). Admin catalog DTOs **do** include `basePrice` (whitelist in
+`assert:no-secrets`). Run `pnpm assert:no-secrets`.
 
 ---
 
@@ -102,6 +104,35 @@ Wallet returns **404** while feature flag `wallet` is OFF (same as `/account/wal
 | POST | `/api/bridal-requests` | guest OK | `multipart/form-data`; file ≤25MB image/video → R2; rate-limited |
 | GET | `/api/reviews?productId=` | — | summary + items |
 | POST | `/api/reviews` | required | No storefront UI yet; recomputes product rating |
+
+---
+
+## Media
+
+| Method | Path | Auth | Notes |
+| --- | --- | --- | --- |
+| GET | `/api/media/[...key]` | — | Serves R2 object (`products/…`, `categories/…`, bridal uploads) |
+
+---
+
+## Admin (Phase 8–9)
+
+All `/api/admin/**` require session + `role=admin` (`requireAdmin`).
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/api/admin/health` | Smoke |
+| GET | `/api/admin/products` | Paginated `?page&pageSize&q&category&inStock&featured&sort` |
+| POST | `/api/admin/products` | Create · default `status=published` · `AdminProductDTO` (+ `basePrice`) |
+| GET/PUT/DELETE | `/api/admin/products/[id]` | DELETE → `CONFLICT` if in `order_items` |
+| POST | `/api/admin/products/[id]/images` | `multipart` · `file` · image/* ≤5MB |
+| DELETE | `/api/admin/products/[id]/images` | JSON `{ url }` |
+| GET/POST | `/api/admin/categories` | Full list (incl. `sortOrder`) |
+| PUT/DELETE | `/api/admin/categories/[slug]` | DELETE → `CONFLICT` if products remain |
+| POST | `/api/admin/categories/[slug]/image` | `multipart` · single `file` |
+
+UI: `/admin`, `/admin/login`, `/admin/forbidden`, `/admin/products*`, `/admin/categories*` (noindex).
+Orders/users/settings: P10–P12 — see `docs/backend/08`.
 
 ---
 

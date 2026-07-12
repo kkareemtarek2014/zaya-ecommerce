@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Phase 7 — assert basePrice / password hashes never leak via API or client UI.
+ * Assert basePrice / password hashes never leak via storefront API or client UI.
+ * Admin may use basePrice in contracts/features/admin APIs (Phase 9).
  */
 import { execSync } from 'node:child_process';
 import path from 'node:path';
@@ -32,19 +33,22 @@ function fail(msg, hits) {
   if (hits) console.error(hits);
 }
 
-const apiBase = rg('basePrice', ['src/app/api/**']);
-if (apiBase) fail('basePrice under src/app/api', apiBase);
+// Storefront API only (exclude /api/admin)
+const apiBase = rg('basePrice', ['src/app/api/**', '!src/app/api/admin/**']);
+if (apiBase) fail('basePrice under storefront src/app/api', apiBase);
 
 const apiPass = rg('passwordHash|password_hash', ['src/app/api/**']);
 if (apiPass) fail('password hash under src/app/api', apiPass);
 
 const clientBase = rg('basePrice', [
   'src/features/**/*.{ts,tsx}',
+  '!src/features/admin/**',
   'src/shared/components/**/*.{ts,tsx}',
   'src/shared/contracts/**/*.ts',
+  '!src/shared/contracts/admin-*.ts',
   'src/shared/lib/**/*.ts',
 ]);
-if (clientBase) fail('basePrice in client/contracts (use price)', clientBase);
+if (clientBase) fail('basePrice in storefront client/contracts', clientBase);
 
 const contractPass = rg('passwordHash|password_hash', [
   'src/shared/contracts/**/*.ts',
@@ -63,7 +67,7 @@ if (!/computeSellPrice\(row\.basePrice\)/.test(productService)) {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\/\/.*$/gm, '');
   if (/[{,]\s*basePrice\s*:/.test(withoutComments)) {
-    fail('product service serializes basePrice as an object key');
+    fail('storefront product service serializes basePrice as an object key');
   }
 }
 
@@ -82,4 +86,4 @@ if (failed) {
   console.error('\nassert:no-secrets failed');
   process.exit(1);
 }
-console.log('assert:no-secrets OK');
+console.log('assert:no-secrets OK (admin basePrice allowed)');

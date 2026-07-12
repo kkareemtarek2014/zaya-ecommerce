@@ -135,10 +135,90 @@ Granular, checkable tasks. Each is small enough to implement + verify in one sit
 - [x] [V] Full `07-checklist.md` passes against deployed Worker (storefront P0–P7 sections; later-phase rows remain open).
 
 ## Phases 8–12 — Admin dashboard
-The full, granular admin task list (auth & shell, products/categories CRUD + images, orders & users,
-locations/promos/bridal/settings, dashboard stats) lives in **`08-admin-dashboard.md` §10**. Do those
-after P0–P7 are green. Note the extra `users.role` migration in P8 and that pricing/shipping must read
-**effective settings** once P11 lands.
+The full, granular admin task list lives in **`08-admin-dashboard.md` §10**. Do those after P0–P7
+are green. Pricing/shipping must read **effective settings** once P11 lands.
+
+### Phase 8 — Admin auth & shell
+> **Revision notes (locked, vs CLAUDE.md + `08` / `01` / `03`):**
+> - **P8 scope only:** auth + shell + shared admin UI primitives. **No** products/categories CRUD,
+>   orders/users APIs, settings UI, or live stats (P9–P12). `/admin` home = placeholder dashboard.
+> - **`users.role`:** already in schema/seed/`UserDTO` (P1/P3). P8 does **not** add a new migration;
+>   confirm `me` returns `role` and wire guards.
+> - **Login:** dedicated `/admin/login` reusing the same httpOnly session + `POST /api/auth/login`.
+>   Unauthenticated `/admin/**` → `/admin/login?redirect=…`. Authenticated non-admin → 403 page.
+> - **RBAC:** only `customer | admin` (`requireAdmin` = `role === 'admin'`). Expanded roles later (`10`).
+> - **Protection:** middleware cookie gate for `/admin` (Edge — no D1); authoritative role check in
+>   client `AdminGuard` (`/api/auth/me`) + server `requireAdmin` on every `/api/admin/**`.
+> - **UI:** `src/features/admin/` + `src/app/admin/**`; same storefront tokens (no separate theme).
+>   Implement **all** §10 P8 primitives now (`DataTable`, `Pagination`, `Dialog`/`ConfirmDialog`,
+>   `Toast`+provider, `Tabs`, `SearchInput`) for P9 composition. Toast provider in admin layout.
+> - **APIs:** add `requireAdmin` now; optional tiny `GET /api/admin/health` for smoke (no CRUD).
+> - **No admin feature flag** — gated by role only. `audit_log` / effective settings = P12 / P11.
+- [x] Confirm `users.role` + seed admin + `auth/me` returns `role` (no new migration).
+- [x] `auth/require-admin.ts`; `GET /api/admin/health` (requireAdmin smoke).
+- [x] `AdminGuard`, `AdminShell` (Sidebar, Topbar, Breadcrumbs); `/admin/login` + 403 page.
+- [x] New primitives: `DataTable`, `Pagination`, `Dialog`/`ConfirmDialog`, `Toast`+provider, `Tabs`, `SearchInput`.
+- [x] `middleware.ts` cookie-gates `/admin`. [V] admin-in / non-admin-403 / responsive shell.
+
+### Phase 9 — Products & Categories CRUD + images
+> **Revision notes (locked, vs CLAUDE.md + `08` §3/§7/§10):**
+> - **Scope:** product + category admin APIs/UI + R2 images only. Out: orders/users, settings,
+>   drafts/archive UX, inventory movements, bulk/CSV, SEO/slug/SKU admin, Temu, audit_log.
+> - **`AdminProductDTO`:** includes `basePrice` (admin-only) + derived sell `price`. Storefront
+>   `ProductDTO` unchanged. Whitelist `assert:no-secrets` for `shared/contracts/admin-*.ts`,
+>   `features/admin/**`, `src/app/api/admin/**`.
+> - **Status:** creates default **`published`** so storefront verify works; no draft workflow UI in P9
+>   (enhancement cols exist but full draft/archive = `10`).
+> - **Pricing:** keep flat `computeSellPrice(basePrice)` (site.config margin); effective settings = P11.
+> - **Images:** multipart only (no base64); **image/** ≤ **5 MB**; product keys
+>   `products/{id}/{uuid}.ext`; category `categories/{slug}/{uuid}.ext`. Serve via
+>   `GET /api/media/[...key]`. JSON create may omit images then upload, or keep seed `/images/*.svg` URLs.
+> - **Delete:** hard DELETE; category with products → `CONFLICT`; product in `order_items` → `CONFLICT`.
+> - **List:** products paginated (`page=1`, `pageSize=20`, `q`, `category`, `inStock`, `featured`, `sort`);
+>   categories = full array (include `sortOrder` in admin DTO).
+> - **UI:** `/admin/products`, `/admin/categories`; un-`soon` nav; reuse P8 DataTable/Dialog/Toast/
+>   SearchInput/Pagination; `ImageUploader` + confirm delete.
+>
+> **Reviewed 2026-07-12 — complete.** Admin catalog APIs + R2 media route + products/categories UI.
+> Creates default `published`. `typecheck`/`lint`/`assert:no-secrets` green. ⏳ live create→storefront
+> + R2 image smoke on your machine (`preview` / deploy).
+- [x] Product admin API (CRUD + image add/remove) + `AdminProductDTO`.
+- [x] Category admin API + image + `AdminCategoryDTO`.
+- [x] `ProductForm`, `CategoryForm`, `ImageUploader`, list pages (search/filter/paginate + confirm delete).
+- [ ] ⏳ [V] create→storefront; delete blocked when referenced; images in R2 via `/api/media`.
+
+### Phase 10 — Orders & Users
+> **Revision notes (locked, vs CLAUDE.md + `08` §3/§6/§10 + live schema):**
+> - **Scope:** admin orders list/filter/detail + status transitions; users list/view/edit/delete with
+>   guards. Out: Bosta shipment create/track (`09`/P14), Paymob admin UI beyond existing
+>   `orders.payment_status` (`09`/P13), `order_status_history` timeline (`10-enhancements`),
+>   `audit_log` (P12), create/delete orders, password reset, email change, Customer 360, RBAC
+>   beyond `customer|admin`.
+> - **No new migration** — `orders.status` + `cancelled`, `users.role`, and FK `onDelete` rules
+>   already exist (orders/reviews/bridal → `set null`; favorites/addresses/sessions/wallet → `cascade`).
+> - **`AdminOrderDTO`:** storefront `OrderDTO` + `userId: string | null` (admin link only). Never
+>   invent Paymob/Bosta fields; `tracking` stays optional empty until P14.
+> - **`AdminUserDTO`:** `{ id, email, name, phone?, role, createdAt, ordersCount }`. Detail adds
+>   `recentOrders: AdminOrderDTO[]` (cap 10). **Never** serialize `passwordHash`.
+> - **Status transitions (server-authoritative):** forward **one step only** along
+>   `placed → confirmed → sourced → shipped → out_for_delivery → delivered`. `cancelled` allowed
+>   from any status **except** `delivered` / already `cancelled`. Same status → no-op OK. Illegal
+>   jump / terminal → `VALIDATION`. `OrderStatusSelect` only offers allowed next values.
+> - **Orders API:** `GET /api/admin/orders` (`q` = id/phone/name, `status`, `governorate`,
+>   `dateFrom`/`dateTo` ISO dates, `page=1`, `pageSize=20`); `GET /[id]`; `PATCH /[id]/status`
+>   `{ status }`. No POST/DELETE orders.
+> - **Users API:** `GET /api/admin/users` (`q` = email/name/phone, `role`, page/pageSize);
+>   `GET /[id]`; `PUT /[id]` `{ name?, phone?, role? }` (email immutable; Egyptian phone when set);
+>   `DELETE /[id]` hard delete.
+> - **Guards:** cannot delete or demote **self**; cannot delete or demote the **last** admin →
+>   `CONFLICT` with clear message.
+> - **UI:** `/admin/orders`, `/admin/orders/[id]`, `/admin/users`, `/admin/users/[id]`; reuse P8/P9
+>   DataTable/SearchInput/Pagination/ConfirmDialog/Toast; `OrderStatusSelect` + `UserForm`;
+>   un-`soon` Orders & Users nav.
+- [ ] Orders admin API (list/filter/detail/status) + `AdminOrderDTO`.
+- [ ] Users admin API (list/view/edit/delete + guards) + `AdminUserDTO`.
+- [ ] Order/user pages (`OrderStatusSelect`, `UserForm`, confirm delete).
+- [ ] [V] illegal status rejected; self/last-admin guards; edits persist.
 
 ## Phases 16–23 — Production enhancements
 The full, granular enhancement task list (inventory ⭐, order timeline ⭐, bulk ⭐, duplication ⭐, audit

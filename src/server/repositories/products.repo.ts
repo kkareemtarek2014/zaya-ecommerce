@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, ne, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ne, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
-import { products } from '@/server/db/schema';
+import { orderItems, products } from '@/server/db/schema';
 
 export type ProductRow = typeof products.$inferSelect;
 
@@ -10,6 +10,7 @@ export type ProductListFilters = {
   sort?: 'newest' | 'price-asc' | 'price-desc' | 'rating';
   q?: string;
   status?: 'published' | 'draft' | 'hidden' | 'archived';
+  inStock?: boolean;
 };
 
 export async function findProducts(
@@ -24,6 +25,12 @@ export async function findProducts(
   }
   if (filters.featured === true) {
     conditions.push(eq(products.featured, true));
+  }
+  if (filters.inStock === true) {
+    conditions.push(eq(products.inStock, true));
+  }
+  if (filters.inStock === false) {
+    conditions.push(eq(products.inStock, false));
   }
   if (filters.q?.trim()) {
     const q = `%${filters.q.trim().toLowerCase()}%`;
@@ -106,4 +113,119 @@ export async function searchProducts(
       ),
     )
     .limit(limit);
+}
+
+export async function findProductByIdAny(
+  db: Db,
+  id: string,
+): Promise<ProductRow | null> {
+  const rows = await db
+    .select()
+    .from(products)
+    .where(eq(products.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function findProductsAdmin(
+  db: Db,
+  filters: ProductListFilters & { page?: number; pageSize?: number } = {},
+): Promise<{ rows: ProductRow[]; total: number }> {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 20));
+  const conditions = [];
+
+  if (filters.status) conditions.push(eq(products.status, filters.status));
+  if (filters.category) {
+    conditions.push(eq(products.categorySlug, filters.category));
+  }
+  if (filters.featured === true) {
+    conditions.push(eq(products.featured, true));
+  }
+  if (filters.inStock === true) {
+    conditions.push(eq(products.inStock, true));
+  }
+  if (filters.inStock === false) {
+    conditions.push(eq(products.inStock, false));
+  }
+  if (filters.q?.trim()) {
+    const q = `%${filters.q.trim().toLowerCase()}%`;
+    conditions.push(
+      sql`(lower(${products.name}) like ${q} or lower(${products.categorySlug}) like ${q} or lower(coalesce(${products.tags}, '')) like ${q})`,
+    );
+  }
+
+  const where = conditions.length ? and(...conditions) : undefined;
+  const [agg] = await db.select({ total: count() }).from(products).where(where);
+  const total = Number(agg?.total ?? 0);
+
+  const orderBy =
+    filters.sort === 'price-asc'
+      ? asc(products.basePrice)
+      : filters.sort === 'price-desc'
+        ? desc(products.basePrice)
+        : filters.sort === 'rating'
+          ? desc(products.rating)
+          : desc(products.createdAt);
+
+  const rows = await db
+    .select()
+    .from(products)
+    .where(where)
+    .orderBy(orderBy)
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  return { rows, total };
+}
+
+export async function insertProduct(
+  db: Db,
+  row: typeof products.$inferInsert,
+): Promise<ProductRow> {
+  await db.insert(products).values(row);
+  const created = await findProductByIdAny(db, row.id as string);
+  if (!created) throw new Error('Failed to create product');
+  return created;
+}
+
+export async function updateProduct(
+  db: Db,
+  id: string,
+  patch: Partial<typeof products.$inferInsert>,
+): Promise<ProductRow> {
+  await db.update(products).set(patch).where(eq(products.id, id));
+  const updated = await findProductByIdAny(db, id);
+  if (!updated) throw new Error('Product not found after update');
+  return updated;
+}
+
+export async function deleteProduct(db: Db, id: string): Promise<boolean> {
+  const result = await db
+    .delete(products)
+    .where(eq(products.id, id))
+    .returning({ id: products.id });
+  return result.length > 0;
+}
+
+export async function countOrderItemsForProduct(
+  db: Db,
+  productId: string,
+): Promise<number> {
+  const [agg] = await db
+    .select({ c: count() })
+    .from(orderItems)
+    .where(eq(orderItems.productId, productId));
+  return Number(agg?.c ?? 0);
+}
+
+export async function countProductsByCategory(
+  db: Db,
+  categorySlug: string,
+): Promise<number> {
+  const [agg] = await db
+    .select({ c: count() })
+    .from(products)
+    .where(eq(products.categorySlug, categorySlug));
+  return Number(agg?.c ?? 0);
 }

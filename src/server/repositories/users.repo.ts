@@ -1,8 +1,15 @@
-import { eq } from 'drizzle-orm';
+import { and, count, desc, eq, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
-import { users } from '@/server/db/schema';
+import { orders, users } from '@/server/db/schema';
 
 export type UserRow = typeof users.$inferSelect;
+
+export type AdminUserListFilters = {
+  q?: string;
+  role?: 'customer' | 'admin';
+  page?: number;
+  pageSize?: number;
+};
 
 export async function findUserByEmail(
   db: Db,
@@ -62,4 +69,90 @@ export async function updateUserProfile(
   const row = await findUserById(db, userId);
   if (!row) throw new Error('User not found after update');
   return row;
+}
+
+export async function updateUserAdmin(
+  db: Db,
+  userId: string,
+  input: {
+    name?: string;
+    phone?: string | null;
+    role?: 'customer' | 'admin';
+  },
+): Promise<UserRow | null> {
+  const patch: Partial<typeof users.$inferInsert> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.phone !== undefined) patch.phone = input.phone;
+  if (input.role !== undefined) patch.role = input.role;
+  if (Object.keys(patch).length === 0) {
+    return findUserById(db, userId);
+  }
+  await db.update(users).set(patch).where(eq(users.id, userId));
+  return findUserById(db, userId);
+}
+
+export async function deleteUser(db: Db, userId: string): Promise<boolean> {
+  const result = await db.delete(users).where(eq(users.id, userId));
+  // D1/sqlite: changes may be on result; treat missing as false via re-read
+  const still = await findUserById(db, userId);
+  return still == null && result !== undefined;
+}
+
+export async function countAdmins(db: Db): Promise<number> {
+  const rows = await db
+    .select({ value: count() })
+    .from(users)
+    .where(eq(users.role, 'admin'));
+  return rows[0]?.value ?? 0;
+}
+
+export async function listAdminUsers(
+  db: Db,
+  filters: AdminUserListFilters = {},
+): Promise<{
+  rows: (UserRow & { ordersCount: number })[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const page = Math.max(1, filters.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 20));
+  const conditions = [];
+
+  if (filters.role) {
+    conditions.push(eq(users.role, filters.role));
+  }
+  if (filters.q?.trim()) {
+    const q = `%${filters.q.trim().toLowerCase()}%`;
+    conditions.push(
+      sql`(lower(${users.email}) like ${q} or lower(${users.name}) like ${q} or lower(coalesce(${users.phone}, '')) like ${q})`,
+    );
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const totalRows = await db
+    .select({ value: count() })
+    .from(users)
+    .where(where);
+  const total = totalRows[0]?.value ?? 0;
+
+  const userRows = await db
+    .select()
+    .from(users)
+    .where(where)
+    .orderBy(desc(users.createdAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  const rows: (UserRow & { ordersCount: number })[] = [];
+  for (const user of userRows) {
+    const c = await db
+      .select({ value: count() })
+      .from(orders)
+      .where(eq(orders.userId, user.id));
+    rows.push({ ...user, ordersCount: c[0]?.value ?? 0 });
+  }
+
+  return { rows, total, page, pageSize };
 }

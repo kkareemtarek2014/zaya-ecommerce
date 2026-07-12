@@ -2,9 +2,7 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Jost, Playfair_Display } from 'next/font/google';
 import { SITE } from '@/config/site.config';
-import { Header } from '@/shared/components/layout/Header';
-import { Footer } from '@/shared/components/layout/Footer';
-import { WhatsAppButton } from '@/shared/components/ui';
+import { StorefrontChrome } from '@/shared/components/layout/StorefrontChrome';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -35,10 +33,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={`${jost.variable} ${playfair.variable}`}>
       <body className="flex min-h-screen flex-col antialiased">
         <Providers>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <WhatsAppButton />
+          <StorefrontChrome>{children}</StorefrontChrome>
         </Providers>
       </body>
     </html>

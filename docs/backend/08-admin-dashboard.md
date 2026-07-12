@@ -17,7 +17,7 @@ The storefront UI/UX is **unchanged**; the dashboard is a new, separate surface 
 | **Products** | `products` + `categories` + R2 images | list (search/filter/paginate), create, edit, delete, image upload/replace/delete. **Enhanced (`10`):** drafts/status, SEO fields, slug/SKU, duplication, bulk actions, CSV import/export, media library, rich-text description, archive/restore |
 | **Inventory** ⭐ | `products.stock_qty` + `inventory_movements` | stock adjustments with reason, movement history, low-stock warnings, reserved stock (`10` §1) |
 | **Categories** | `categories` | list, create, edit, delete |
-| **Orders** | `orders` + `order_items` (+ `payments`, `shipments`) | list (search/filter/paginate), details, update status, **view Paymob payment status**, **create/refresh Bosta shipment + tracking** (see `09`) |
+| **Orders** | `orders` + `order_items` (+ later `payments`, `shipments`) | **P10:** list (search/filter/paginate), details, update status (validated transitions). **P13–P14 (`09`):** view Paymob payment rows + create/refresh Bosta shipment/tracking |
 | **Users** | `users` | list, view, edit (name/phone/role), delete |
 | **Locations** | `governorates`, `shipping_zones` | manage governorates (name, zone), edit zone delivery fees + free-shipping threshold |
 | **Promo codes** | `promos` | list, create, edit, activate/deactivate, delete |
@@ -98,16 +98,16 @@ type Paginated<T> = { items: T[]; page: number; pageSize: number; total: number;
 - `POST /api/admin/categories/[slug]/image` — multipart → R2 → sets `image`.
 
 ### Orders
-- `GET /api/admin/orders` — query `q` (id/phone/name), `status`, `governorate`, `dateFrom`, `dateTo`, `page`, `pageSize` → `Paginated<OrderDTO>`.
-- `GET /api/admin/orders/[id]` → `OrderDTO` (with items).
-- `PATCH /api/admin/orders/[id]/status` — `{ status: OrderStatus }` (validate transition) → updated `OrderDTO`. (Orders are **not** created/deleted from admin — they come from checkout.)
-- `POST /api/admin/orders/[id]/shipment` — create/retry a **Bosta** delivery for the order; `GET` fetches live tracking. `GET /api/admin/shipments` lists shipments. Order detail also shows **Paymob** payment status (`payments`). Full spec in `09-integrations-bosta-paymob.md`.
+- `GET /api/admin/orders` — query `q` (id/phone/name), `status`, `governorate`, `dateFrom`, `dateTo`, `page`, `pageSize` → `Paginated<AdminOrderDTO>` (`OrderDTO` + `userId`).
+- `GET /api/admin/orders/[id]` → `AdminOrderDTO` (with items).
+- `PATCH /api/admin/orders/[id]/status` — `{ status: OrderStatus }` (validate transition — see §6) → updated `AdminOrderDTO`. (Orders are **not** created/deleted from admin — they come from checkout.)
+- **Deferred to P13–P14 (`09`):** `POST/GET /api/admin/orders/[id]/shipment`, `GET /api/admin/shipments`, Paymob payment-row UI. P10 still shows `paymentMethod` / `paymentStatus` already on the order row.
 
 ### Users
 - `GET /api/admin/users` — `q` (email/name/phone), `role`, `page`, `pageSize` → `Paginated<AdminUserDTO>` (`id,email,name,phone,role,createdAt,ordersCount`).
-- `GET /api/admin/users/[id]` → `AdminUserDTO` + recent orders.
-- `PUT /api/admin/users/[id]` — `{ name?, phone?, role? }` → updated. (Email immutable; can't demote the last admin.)
-- `DELETE /api/admin/users/[id]` — soft rule: block deleting self / last admin; cascades favorites/addresses/sessions, sets orders.user_id null. → `{ ok:true }`.
+- `GET /api/admin/users/[id]` → `AdminUserDTO` + `recentOrders` (≤10).
+- `PUT /api/admin/users/[id]` — `{ name?, phone?, role? }` → updated. (Email immutable; can't demote self or the last admin.)
+- `DELETE /api/admin/users/[id]` — block deleting self / last admin; DB cascades favorites/addresses/sessions/wallet; orders/reviews/bridal `user_id` → null. → `{ ok:true }`.
 
 ### Locations
 - `GET /api/admin/governorates` → `Governorate[]`.
@@ -211,9 +211,11 @@ filter controls, pagination, and toast notifications on success/error. All acces
 - **Referential safety:** deleting a category with products → `CONFLICT`; deleting a governorate used by
   orders/addresses → `CONFLICT`; deleting a product referenced by `order_items` → soft-handle (block, or
   set `in_stock=false` + keep the row so order history stays intact). Pick "block with clear message".
-- **Order status transitions:** validate forward-only flow (`placed→confirmed→sourced→shipped→
-  out_for_delivery→delivered`, plus `cancelled` from any pre-delivered state). Reject illegal jumps.
-- **Admin safety:** cannot delete/demote self or the last remaining admin.
+- **Order status transitions:** forward **one step only** along
+  `placed→confirmed→sourced→shipped→out_for_delivery→delivered`. `cancelled` from any state except
+  `delivered` / already `cancelled`. Reject skips, backwards moves, and edits to terminal statuses
+  (`VALIDATION`). (Full history table = `10-enhancements` ⭐ timeline — not P10.)
+- **Admin safety:** cannot delete/demote self or the last remaining admin (`CONFLICT`).
 - **Settings validation:** profit margin clamped to 0.20–0.30 (business rule); fees ≥ 0.
 - **Prices:** admin sees/edits `basePrice`; storefront DTO still strips it. `price` always recomputed.
 - **Every mutation** may write `audit_log` (actor, action, entity, before/after summary).
@@ -260,8 +262,10 @@ users, and the sample order — matching what the frontend shows today.
 - **P9 — Products & Categories CRUD + images:** admin product/category APIs + R2 image upload; list
   (search/filter/paginate), create/edit/delete forms, confirm dialogs. **Verify:** create→appears on
   storefront; edit price/stock reflects; image upload lands in R2; delete guarded by references.
-- **P10 — Orders & Users:** admin orders (list/filter/detail/status) + users (list/view/edit/delete with
-  guards). **Verify:** status update flows validate; user edits persist; last-admin guard works.
+- **P10 — Orders & Users:** admin orders (list/filter/detail/status; one-step + cancel rules) + users
+  (list/view/edit/delete with self/last-admin guards). **Out of P10:** Bosta/Paymob admin (`09`),
+  `order_status_history`, `audit_log`. **Verify:** illegal status rejected; user edits persist;
+  last-admin/self guards.
 - **P11 — Locations, Promos, Bridal, Settings:** governorates + shipping zones editing (pricing/shipping
   read effective settings), promo CRUD, bridal request review, settings form (margin clamp).
   **Verify:** change a zone fee → checkout shipping updates; margin change → storefront prices update.
@@ -271,20 +275,20 @@ users, and the sample order — matching what the frontend shows today.
 
 ## 10. Admin task checklist
 
-**P8**
-- [ ] Add `users.role` (migration) + reseed admin; `auth/me` returns `role`.
-- [ ] `auth/require-admin.ts`; wrap `/api/admin/**`.
-- [ ] `AdminGuard`, `AdminShell` (Sidebar, Topbar, Breadcrumbs); `/admin/login`.
-- [ ] New primitives: `DataTable`, `Pagination`, `Dialog`/`ConfirmDialog`, `Toast`+provider, `Tabs`, `SearchInput`.
-- [ ] `middleware.ts` protects `/admin`. [V] admin-in / non-admin-403 / responsive shell.
+**P8** *(revision locked in `06-tasks.md` — role column already exists; no new migration)*
+- [x] Confirm `users.role` + seed admin; `auth/me` returns `role`.
+- [x] `auth/require-admin.ts`; `GET /api/admin/health` (smoke); wrap future `/api/admin/**`.
+- [x] `AdminGuard`, `AdminShell` (Sidebar, Topbar, Breadcrumbs); `/admin/login` + 403.
+- [x] New primitives: `DataTable`, `Pagination`, `Dialog`/`ConfirmDialog`, `Toast`+provider, `Tabs`, `SearchInput`.
+- [x] `middleware.ts` cookie-gates `/admin`. [V] admin-in / non-admin-403 / responsive shell.
 
-**P9**
-- [ ] Product admin API (list/create/read/update/delete, image add/remove) + `AdminProductDTO`.
-- [ ] Category admin API + image.
-- [ ] `ProductForm`, `CategoryForm`, `ImageUploader`, product/category list pages (search/filter/paginate + confirm delete).
-- [ ] [V] create shows on storefront; delete blocked when referenced; images in R2.
+**P9** *(revision locked in `06-tasks.md` — published-by-default; flat margin; image ≤5MB; hard delete + CONFLICT)*
+- [x] Product admin API (list/create/read/update/delete, image add/remove) + `AdminProductDTO`.
+- [x] Category admin API + image + `AdminCategoryDTO`.
+- [x] `ProductForm`, `CategoryForm`, `ImageUploader`, product/category list pages (search/filter/paginate + confirm delete).
+- [ ] ⏳ [V] create shows on storefront; delete blocked when referenced; images in R2.
 
-**P10**
+**P10** *(revision locked in `06-tasks.md` — one-step status + cancel; AdminOrderDTO+userId; no Bosta/Paymob/audit)*
 - [ ] Orders admin API (list/filter/detail/status transition) + pages.
 - [ ] Users admin API (list/view/edit/delete + guards) + pages.
 - [ ] [V] status transitions validated; last-admin/self guards.
