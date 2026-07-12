@@ -1,140 +1,176 @@
 <div align="center">
   <img src="https://via.placeholder.com/150x150/fdfbf7/c4a484?text=Z" alt="Zaya Logo" width="120" height="120" />
   <h1>✨ Zaya — Premium Women's Accessories ✨</h1>
-  <p><strong>Curated women's accessories delivered anywhere in Egypt with Cash on Delivery.</strong></p>
-  <p>Built as a sleek, feature-based Next.js storefront, perfectly engineered for scalability, stunning UI/UX, and robust performance.</p>
+  <p><strong>Curated women's accessories (زينة) delivered anywhere in Egypt — Cash on Delivery today; card &amp; mobile wallet coming via Paymob.</strong></p>
+  <p>A sleek, feature-based Next.js storefront engineered for scalability, stunning UI/UX, and robust performance.</p>
 </div>
 
 <hr />
 
+## 📌 Project Status
+
+The **frontend is feature-complete** and runs on a **dummy data layer** (static files in `src/shared/data/`
+plus persisted Zustand stores). There is **no real backend yet**. The complete, phased plan to move onto
+**Cloudflare** (Workers + D1 + R2), add an **admin dashboard**, and integrate **Bosta** (shipping) and
+**Paymob** (payments) lives in [`docs/backend/`](./docs/backend/README.md) — start with its README.
+
+For an at-a-glance map of the whole codebase and business rules, see [`CLAUDE.md`](./CLAUDE.md).
+
+---
+
 ## 🚀 Tech Stack
 
-We leverage modern web technologies to ensure a blazingly fast and delightful shopping experience:
-
-- **Framework:** Next.js (App Router) & React 19
-- **Language:** TypeScript (Strict Mode)
-- **Styling:** Tailwind CSS v4 (Mobile-first, Custom Brand Palette)
-- **State Management:** Zustand (Persisted Cart)
-- **Data Fetching:** React Query
-- **Forms & Validation:** react-hook-form + Zod
-- **Icons:** Lucide React
+- **Framework:** Next.js 16 (App Router) & React 19
+- **Language:** TypeScript (strict mode — no `any`)
+- **Styling:** Tailwind CSS v4 (CSS-first, tokens in `src/styles/tokens.css`; no `tailwind.config.ts`)
+- **Client state:** Zustand (persisted stores)
+- **Server state:** React Query (TanStack)
+- **Forms & validation:** react-hook-form + Zod v4
+- **Icons:** lucide-react · **Package manager:** pnpm
+- **Planned backend:** Cloudflare Workers (via `@opennextjs/cloudflare`) + D1 (SQLite) + Drizzle ORM + R2
 
 ---
 
 ## 🛠️ Getting Started
 
-To get a local copy up and running, follow these simple steps:
-
 ### Prerequisites
-Make sure you have Node.js (v18+) installed.
+Node.js **v18+** and **pnpm**.
 
-### Installation & Run
+### Install & run
 ```bash
-# 1. Install dependencies
-pnpm install
-
-# 2. Run the development server
-pnpm dev
+pnpm install     # install dependencies
+pnpm dev         # start the dev server
 ```
-Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Quality Checks
-Run these commands to verify code quality before deploying:
+### Quality checks (run before every commit)
 ```bash
-pnpm build      # Test production build
-pnpm typecheck  # Verify TypeScript types
-pnpm lint       # Run ESLint
+pnpm build      # production build — 0 errors
+pnpm typecheck  # TypeScript — 0 errors
+pnpm lint       # ESLint — 0 errors (1 known benign RHF watch() warning)
 ```
 
 ---
 
 ## 💼 Business Rules & Configuration
 
-All core business logic is centralized in one easy-to-manage file: **`src/config/site.config.ts`**.
+Core business logic is centralized in **`src/config/site.config.ts`**.
 
 | Setting | Description |
 | :--- | :--- |
-| **`PROFIT_MARGIN`** | Markup on sourcing cost (e.g., `0.25` = 25%). Allowed range: 20–30%. |
-| **`SHIPPING_RATES`** | Flat rates by zone (e.g., Cairo/Giza: 50 EGP, Near: 80 EGP, Far: 100 EGP). |
-| **`FREE_SHIPPING_THRESHOLD`** | Orders totaling above this amount automatically get free shipping! |
-| **`SITE`** | Brand name, tagline, description, and currency (EGP). |
+| **`PROFIT_MARGIN`** | Markup on sourcing cost (`0.25` = 25%). Allowed range 20–30%. |
+| **`SHIPPING_RATES`** | Flat rate by zone — Cairo/Giza 50 EGP · Near 80 EGP · Far 100 EGP. |
+| **`FREE_SHIPPING_THRESHOLD`** | Orders at/above this subtotal (1,500 EGP) ship free. |
+| **`SITE`** | Brand name, tagline, description, currency (EGP), SEO keywords. |
 
-*(Note: Governorate-to-zone mappings live in `src/shared/data/governorates.data.ts`)*
+Feature flags live in **`src/config/features.config.ts`** and drive `middleware.ts` (disabled routes →
+404). Governorate-to-zone mappings live in `src/shared/data/governorates.data.ts` (all 27 governorates).
+Promo codes live in `src/shared/data/promos.data.ts`.
 
 ---
 
 ## 💰 Dynamic Pricing Model
 
-Products are stored with a base sourcing cost (`basePrice`).
-The customer-facing price is dynamically computed by the `getSellPrice()` utility located in `src/shared/utils/price.ts`. 
+Products store a base sourcing cost (`basePrice`). The customer price is computed by `getSellPrice()` in
+`src/shared/utils/price.ts`:
 
-**The formula:** `(Cost + Margin) → Rounded up to the nearest 5 EGP.`
-Change the margin in `site.config.ts` once, and every single price across the site updates instantly!
+> **`(cost + margin) → rounded up to the nearest 5 EGP`**
+
+Change the margin once in `site.config.ts` and every price on the site updates instantly. `basePrice` is
+a secret sourcing cost and must **never** be sent to the browser once the backend exists (admin-only).
 
 ---
 
-## 🏗️ Project Architecture (Feature-Based)
-
-We strictly follow a modular, feature-based architecture for clean separation of concerns.
+## 🏗️ Project Architecture (feature-based)
 
 ```text
 src/
-├── app/            # Next.js App Router pages (UI layout only, no logic)
-├── config/         # site.config.ts (Core business rules)
-├── features/       # Modular features (barrel-exported via index.ts)
-│   ├── shop/       # Catalog, product grid, category filter
-│   ├── product/    # Product details & image galleries
-│   ├── cart/       # Zustand cart store (persisted) + slide-out drawer
-│   ├── checkout/   # Shipping calculator, robust Zod checkout form
-│   └── order/      # Order log & confirmation page
-├── shared/         # Global utilities & UI Kit
-│   ├── components/ # Reusable UI components (Buttons, Inputs, Header, Footer)
-│   ├── data/       # Dummy data layer (products, categories, zones)
-│   ├── types/      # Global TypeScript interfaces
-│   └── utils/      # Helpers (price formatters, cn utility)
-└── styles/         # tokens.css (Brand palette — edit colors here)
+├── app/            # Next.js App Router pages (UI/layout; logic lives in features)
+├── config/         # site.config.ts (business rules) · features.config.ts (flags)
+├── middleware.ts   # feature-flag route gating (disabled → 404)
+├── features/       # modular features (barrel-exported via index.ts)
+│   ├── shop/           # catalog, category pills, sort, product services + hooks
+│   ├── product/        # details, gallery, related, reviews, recently-viewed
+│   ├── product-search/ # modal search over name/category/tags
+│   ├── cart/           # persisted cart store, drawer, coupon, note, recommendations
+│   ├── checkout/       # Egyptian-phone Zod form, shipping calc, COD → places order
+│   ├── order/          # client order log, confirmation, status timeline
+│   ├── account/        # profile, addresses, favorites, wallet, orders, vouchers
+│   ├── auth/           # login/register/forgot, AuthGuard, mock users store
+│   └── bridal-custom/  # bespoke bridal request form (photo/video)
+├── shared/         # global utilities & UI kit
+│   ├── components/     # UI primitives (Button, Input, Drawer…), Header, Footer
+│   ├── contexts/       # FeatureContext
+│   ├── data/           # dummy data layer (products, categories, governorates, promos, users)
+│   ├── hooks/          # useHydrated, useFocusTrap, useEscapeKey, useScrollLock
+│   ├── store/          # shared stores (favorites)
+│   ├── types/          # global TypeScript interfaces
+│   └── utils/          # price helpers, cn()
+└── styles/         # tokens.css (brand palette — edit colors here)
 ```
 
-**Architectural Rules:**
-- Features must only import from another feature's `index.ts` (barrel file).
-- Data access is abstracted through `features/*/services/`.
-- Strict typing (No `any` allowed).
-- All forms are bound with Zod schemas.
+**Architectural rules:**
+- Features import only from another feature's `index.ts` barrel — never deep paths.
+- All data access goes through `features/*/services/`; components never read data files directly.
+- Strict typing (no `any`), no Redux, no auth tokens in localStorage.
+- Mobile-first + accessible (aria-labels, real `<label>`s); animations are CSS-only.
+- Components reading persisted Zustand stores must gate on `useHydrated()`.
 
 ---
 
-## 🔌 API & Backend Integration
+## ✨ Features
 
-Currently, the store reads from a robust dummy data layer (`src/shared/data/`). Once your backend or supplier feed is ready:
+- **Shop & catalog** — grid, category pills, sorting, featured & new arrivals.
+- **Product details** — image gallery, add-to-bag, related products, reviews, recently-viewed.
+- **Search** — modal search across product name, category, and tags.
+- **Cart** — persisted store with quantity control, promo codes, order note, and recommendations.
+- **Checkout** — Egyptian-phone validation, per-governorate shipping, free-shipping threshold, COD.
+- **Orders** — client-side order log, confirmation page, and status timeline.
+- **Accounts** *(gated by `AuthGuard`)* — profile, saved addresses, favorites/wishlist, order history,
+  wallet *(feature flag OFF)*, vouchers.
+- **Auth** — login / register / forgot-password (currently a mock; becomes real with the backend).
+- **Bridal custom** — bespoke request form with photo/video (replies promised ≤ 2 days).
+- **SEO** — metadata, Product/Organization/WebSite JSON-LD, sitemap/robots, Arabic keywords.
 
-1. Document your API endpoints in `API.md`.
-2. Replace the function bodies inside `src/features/shop/services/products.service.ts` and `src/features/checkout/services/orders.service.ts`.
-3. **That's it.** Because components only communicate through services, no UI code needs to change!
+---
+
+## 🔌 Backend Integration (planned)
+
+Today the store reads from the dummy data layer. The seams are already built so the switch is mechanical
+— see [`docs/backend/`](./docs/backend/README.md):
+
+1. Stand up Cloudflare (D1 + R2) and seed the existing mock data (`pnpm db:seed`).
+2. Build Route Handlers under `src/app/api/**`, then rewrite the **service bodies** (e.g.
+   `features/shop/services/products.service.ts`) and store submit functions to call them.
+3. **The UI/UX does not change** — components only talk to services.
+
+The plan also covers an **admin dashboard** (`08`) and **Paymob + Bosta** integration (`09`).
 
 ---
 
 ## 🗺️ Sitemap
 
-- `/` — Homepage (Hero, Featured Products)
-- `/shop` — Full Catalog
-- `/shop/[category]` — Filtered Catalog (Jewelry, Bags, Scarves, etc.)
-- `/product/[id]` — Product Details
-- `/cart` — Dedicated Cart Page (also available as a global drawer)
-- `/checkout` — Secure Checkout Flow
-- `/order/[id]` — Order Confirmation & Receipt
-- `/about` — Our Story
-- `/contact` — Customer Support & FAQ
-- `/terms`, `/privacy` — Legal pages
+**Storefront:** `/` · `/shop` · `/shop/[category]` · `/product/[id]` · `/cart` · `/checkout` ·
+`/order/[id]` · `/bride/custom`
+**Auth:** `/auth/login` · `/auth/register` · `/auth/forgot-password`
+**Account** *(protected)*: `/account` · `/account/profile` · `/account/addresses` ·
+`/account/favorites` · `/account/orders` · `/account/wallet` · `/account/vouchers`
+**Legal/marketing:** `/about` · `/contact` · `/privacy` · `/terms` · `/cookies`
+
+Categories: jewelry, bags, hair, scarves, sunglasses, watches, **bride**.
 
 ---
 
 ## 🎯 Roadmap
 
-- [ ] **Admin Dashboard:** Manage orders, edit catalog, and adjust margins dynamically.
-- [ ] **Live Supplier Feed:** Automated product imports from supplier APIs.
-- [ ] **Payment Gateway Integration:** Support for Paymob / Fawry alongside Cash on Delivery.
-- [ ] **User Accounts:** Wishlists, order history, and saved addresses.
-- [ ] **RTL Support:** Full Arabic localization for the Egyptian market.
+- [ ] **Cloudflare backend** — Workers + D1 + R2 replacing the dummy data layer.
+- [ ] **Admin dashboard** — manage products, categories, orders, users, locations, promos, settings.
+- [ ] **Paymob payments** — card + mobile wallet alongside Cash on Delivery.
+- [ ] **Bosta fulfilment** — delivery creation, COD collection, and live tracking.
+- [ ] **Real auth** — hashed users + httpOnly session cookie (replaces the mock).
+- [ ] **RTL support** — full Arabic localization for the Egyptian market.
+
+Detailed, phased specs for all of the above: [`docs/backend/`](./docs/backend/README.md).
 
 ---
 
