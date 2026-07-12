@@ -63,9 +63,10 @@ fixed, optional `minOrderValue`). Applied in `cart.store.applyCoupon`.
 2. **Barrel exports** — external code imports ONLY from `features/[name]/index.ts`, never deep paths.
 3. **All data access via services** — e.g. `features/shop/services/products.service.ts`. Components never
    import data files directly (data files in `shared/data/` are the dummy layer).
-4. **Dummy data layer** — Temu has no public API. Everything reads from `src/shared/data/` (or persisted
-   stores). When the real backend exists, document it in `API.md` and change ONLY service bodies / store
-   submit functions (the seams were built for this — see `docs/backend/04-frontend-integration.md`).
+4. **Dummy / seed data** — Temu has no public API. Local bootstrap uses `pnpm db:seed` (and
+   `db:seed:remote` for production D1). Client features call **services → `/api/*`** only. Live
+   contract: **`API.md`**. Further backend changes should prefer service bodies over UI rewrites
+   (see `docs/backend/04-frontend-integration.md`).
 5. **No `any`**, no Redux, no tokens in localStorage (only cart/order/request metadata is persisted
    client-side; auth uses an httpOnly session cookie once the backend lands).
 6. **Mobile-first** Tailwind; WCAG: icon buttons need `aria-label`, forms use real `<label>`s.
@@ -87,13 +88,13 @@ fixed, optional `minOrderValue`). Applied in `cart.store.applyCoupon`.
 | Checkout | `features/checkout/` | Zod schema (Egyptian phone), shipping calc, COD; places order |
 | Orders | `features/order/` | client order log (`Zaya-orders`), confirmation, status timeline |
 | Account | `features/account/` | profile/addresses/favorites/wallet via `/api/account/*`; wallet flag OFF; vouchers UI only |
-| Auth | `features/auth/` | login/register/forgot, `AuthGuard`, mock users store (plaintext seed) |
+| Auth | `features/auth/` | login/register/forgot, `AuthGuard`, httpOnly session via `/api/auth/*` |
 | Favorites/wishlist | `shared/store/favorites.store.ts` | shared across shop cards, product, account |
-| Bridal custom | `features/bridal-custom/` | photo/video request form; replies ≤ 2 days; file NOT uploaded yet (needs backend) |
+| Bridal custom | `features/bridal-custom/` | multipart → `/api/bridal-requests` + R2; replies ≤ 2 days |
 
-**Persisted Zustand keys:** `Zaya-cart`, `Zaya-bridal-requests`, `Zaya-favorites` (guest wishlist;
-synced to `/api/account/favorites` on login), `Zaya-recently-viewed`. Auth/profile/addresses/orders/
-wallet are server-backed (httpOnly session + `/api/*`); no longer client-persisted.
+**Persisted Zustand keys:** `Zaya-cart`, `Zaya-favorites` (guest wishlist; synced to
+`/api/account/favorites` on login), `Zaya-recently-viewed`. Auth/profile/addresses/orders/wallet/
+bridal/reviews are server-backed.
 
 ## Pages
 
@@ -109,17 +110,12 @@ Categories: jewelry, bags, hair, scarves, sunglasses, watches, **bride**.
 
 ## User/Data Logic (how the site actually works)
 
-- **Catalog:** `products.service` reads `shared/data/products.data.ts`; hooks in
-  `features/shop/hooks/useProducts.ts` wrap it in React Query. Prices derived from `basePrice` via
-  `getSellPrice`. Search/related/featured/new-arrivals are service functions.
-- **Cart:** client-only. `addItem` stores the computed sell price as `unitPrice`. Coupons validated by
-  `validatePromoCode`. Selectors compute count/subtotal/discount/total.
-- **Checkout → order:** `CheckoutForm` validates (Egyptian phone, governorate), computes shipping, then
-  `ordersStore.placeOrder(draft)` creates a `ZN-…` order client-side and routes to `/order/[id]`.
-  Payment is `cod` literal today.
-- **Auth (mock):** `authService` reads/writes `useUsersStore` (seeded, plaintext). `authStore` holds the
-  session; `AuthGuard` gates `/account/*` after hydration.
-- **Bridal:** `BridalRequestForm` validates a photo/video (≤25MB) and stores metadata only (no upload).
+- **Catalog:** shop services → `/api/products*` (D1); RSC pages use server `product.service`. Sell `price` only (no `basePrice` in client).
+- **Cart:** client-only Zustand; coupons via `POST /api/promos/validate`.
+- **Checkout → order:** `usePlaceOrder` → `POST /api/orders` (server totals); confirmation via `GET /api/orders/[id]`.
+- **Auth:** `authService` → `/api/auth/*`; session cookie is source of truth; `AuthGuard` waits on `/me`.
+- **Bridal:** `BridalRequestForm` → `POST /api/bridal-requests` (multipart; optional image/video ≤25MB → R2).
+- **Reviews:** `ProductReviews` → `GET /api/reviews?productId=`.
 
 ## SEO (already implemented — keep it intact)
 
@@ -133,9 +129,10 @@ Categories: jewelry, bags, hair, scarves, sunglasses, watches, **bride**.
 ## Verification (run after every change group)
 
 ```bash
-pnpm build      # 0 errors
-pnpm typecheck  # 0 errors
-pnpm lint       # 0 errors (1 known benign warning: react-hooks/incompatible-library on RHF watch())
+pnpm build              # 0 errors
+pnpm typecheck          # 0 errors
+pnpm lint               # 0 errors (1 known benign warning: react-hooks/incompatible-library on RHF watch())
+pnpm assert:no-secrets  # no basePrice / passwordHash in API or client DTOs
 ```
 
 ## Conventions
@@ -153,17 +150,10 @@ Full, phased specs live in **`docs/backend/`** — read the index first (`README
 
 ## Known Placeholders / TODO
 
-- Product images are gradient SVGs in `public/images/` — replace with real photos (keep same paths or
-  update data files; admin image upload → R2 is specified in `docs/backend/08`).
-- `SITE.url` is a placeholder domain.
-- Reviews are still hardcoded in `ProductReviews.tsx` (Phase 6). Wallet API exists but flag OFF → page + API 404.
-- Bridal request uploads store file metadata only — real upload needs backend (multipart POST → R2).
-- Auth is a plaintext mock — becomes hashed users + httpOnly session (see `03`).
-- `API.md` doesn't exist yet — create it when defining the backend contract (`07` Phase 7).
-- **Roadmap:** Cloudflare backend, admin dashboard, **Paymob** (card + mobile wallet), **Bosta**
-  (shipping/fulfilment + COD collection + tracking), production enhancements (`docs/backend/10`:
-  inventory, order timeline, analytics, RBAC, cron), **Temu sourcing + landed-cost dynamic pricing +
-  bundles/pre-orders + micro-warehousing fulfilment** (`docs/backend/11`), Arabic RTL.
-- **Sourcing/fulfilment model:** Temu is used to **sync catalog + track inventory** only. Automation
-  never auto-orders at checkout — items are bulk-bought, repackaged in Zaya boxes, and shipped locally
-  via Bosta (Temu prohibits direct dropshipping — verify their ToS). See `docs/backend/11` §4.
+- Product images are gradient SVGs in `public/images/` — replace with real photos (admin → R2 in `docs/backend/08`).
+- `SITE.url` is still a placeholder domain (`https://Zaya-eg.com`) — update when purchased.
+- Wallet flag OFF → page + API 404 (seeded wallet txns ready for when flag flips).
+- Review **create** API exists (auth); no storefront submit UI yet.
+- Seed passwords (`password123`) are for local/remote bootstrap only — rotate before public go-live.
+- **API.md** documents the live storefront contract (Phase 7). Admin/Paymob/Bosta still in `docs/backend/08`–`09`.
+- **Roadmap:** Admin dashboard (`08`), **Paymob** + **Bosta** (`09`), enhancements (`10`), Temu + landed-cost (`11`), Arabic RTL.

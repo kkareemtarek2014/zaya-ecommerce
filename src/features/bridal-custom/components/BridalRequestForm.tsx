@@ -6,22 +6,24 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleCheck, Clock, ImagePlus, X } from 'lucide-react';
 import { Button, Input } from '@/shared/components/ui';
+import { AppError } from '@/shared/contracts/errors';
 import {
   bridalRequestSchema,
   type BridalRequestFormValues,
 } from '../schema/bridal-request.schema';
-import { useBridalRequestsStore } from '../store/bridal-requests.store';
+import { useSubmitBridalRequest } from '../hooks/useBridalRequest';
 
 export function BridalRequestForm() {
-  const submitRequest = useBridalRequestsStore((s) => s.submitRequest);
+  const submitMutation = useSubmitBridalRequest();
   const [submittedId, setSubmittedId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
     register,
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<BridalRequestFormValues>({
     resolver: zodResolver(bridalRequestSchema),
   });
@@ -45,16 +47,20 @@ export function BridalRequestForm() {
     );
   }
 
-  const onSubmit = (values: BridalRequestFormValues) => {
-    const request = submitRequest({
-      fullName: values.fullName,
-      phone: values.phone,
-      weddingDate: values.weddingDate || undefined,
-      description: values.description,
-      fileName: values.file?.name,
-      fileType: values.file?.type,
-    });
-    setSubmittedId(request.id);
+  const onSubmit = async (values: BridalRequestFormValues) => {
+    setFormError(null);
+    try {
+      const result = await submitMutation.mutateAsync(values);
+      setSubmittedId(result.id);
+    } catch (err) {
+      setFormError(
+        err instanceof AppError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Could not send your request',
+      );
+    }
   };
 
   return (
@@ -63,6 +69,7 @@ export function BridalRequestForm() {
       className="mx-auto max-w-lg space-y-4"
       noValidate
     >
+      {formError && <p className="text-sm text-status-error">{formError}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Full name"
@@ -159,8 +166,13 @@ export function BridalRequestForm() {
         )}
       />
 
-      <Button type="submit" fullWidth size="lg" disabled={isSubmitting}>
-        {isSubmitting ? 'Sending…' : 'Send my request'}
+      <Button
+        type="submit"
+        fullWidth
+        size="lg"
+        isLoading={submitMutation.isPending}
+      >
+        Send my request
       </Button>
 
       <p className="flex items-center justify-center gap-2 text-center text-xs text-text-muted">

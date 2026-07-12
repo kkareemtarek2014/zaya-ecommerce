@@ -85,19 +85,54 @@ Granular, checkable tasks. Each is small enough to implement + verify in one sit
 - [x] [V] Profile persists; address add/delete (ownership enforced); favorites sync; wallet balance = Σcredit−Σdebit; wallet route 404 when flag off.
 
 ## Phase 6 — Bridal + R2 + Reviews
-- [ ] `upload.service` (R2 put/get), `bridal-requests.repo`, `POST /api/bridal-requests` (multipart, ≤25MB, image/video).
-- [ ] `useSubmitBridalRequest` (multipart); wire `BridalRequestForm`.
-- [ ] `reviews.repo` + `GET /api/reviews?productId=`; rewire `ProductReviews` (list + average + breakdown bars). `POST /api/reviews` (auth, no UI).
-- [ ] [V] Bridal submit → DB row + R2 object; oversized/wrong-type rejected (413/400); reviews render from DB with correct summary; recompute updates product rating/count.
+> **Revision notes (locked, vs CLAUDE.md + `03`/`04`/`01`):**
+> - Bridal is **public** (guest OK); if session present, set optional `user_id` (same soft-auth as orders).
+> - File: ≤25 MB → `PAYLOAD_TOO_LARGE` **413**; MIME must start with `image/` or `video/` → else
+>   `VALIDATION` **400**. R2 key `bridal/{id}/{sanitizedFilename}` via binding `UPLOADS`. No media
+>   read route in P6 (store `file_key` only). Empty `weddingDate` → `null`.
+> - Response 201: `{ id, status, createdAt }`. Add `bridal.contract.ts`. Drop `Zaya-bridal-requests`
+>   persist; success UI from mutation response + React state only.
+> - Reuse feature `bridalRequestSchema` text fields server-side; validate file size/MIME after
+>   `request.formData()` (Workers `File` ≠ browser Zod file custom cleanly).
+> - Reviews: `GET` public by `productId`; summary (avg/count/breakdown `"1"`…`"5"`) computed from
+>   rows. `POST` auth-only, no UI; `authorName` = session user name; denormalized recompute of
+>   `products.rating` / `review_count` (1 decimal). Helpful button display-only (no increment API).
+> - `ProductReviews` takes `productId`; live UI shows seed truth for `p-001` (not fake 4.8/124).
+- [x] `upload.service` (R2 put/get), `bridal-requests.repo`, `POST /api/bridal-requests` (multipart, ≤25MB, image/video).
+- [x] `useSubmitBridalRequest` (multipart); wire `BridalRequestForm`.
+- [x] `reviews.repo` + `GET /api/reviews?productId=`; rewire `ProductReviews` (list + average + breakdown bars). `POST /api/reviews` (auth, no UI).
+- [x] [V] Bridal submit → DB row + R2 object; oversized/wrong-type rejected (413/400); reviews render from DB with correct summary; recompute updates product rating/count.
 
 ## Phase 7 — Hardening & deploy
-- [ ] Audit: every write validated with a contract schema; every route returns the envelope; errors mapped to codes.
-- [ ] Ensure `basePrice` & `password_hash` never serialized (add a serialization test/grep).
-- [ ] Basic rate-limit on `auth/*` + bridal (optional KV); security headers.
-- [ ] `db:migrate:remote` + seed remote D1; set secrets; `deploy`.
-- [ ] Smoke test production URL; verify cart/checkout/order still `noindex`.
-- [ ] Write `API.md` at repo root (CLAUDE.md TODO); update `SITE.url` if domain purchased.
-- [ ] [V] Full `07-checklist.md` passes against deployed Worker.
+> **Revision notes (locked, vs CLAUDE.md + `07-checklist` / `01` / `05`):**
+> - **Audit:** every write already Zod-validated in services (keep that pattern); every route via
+>   `withHandler` → envelope; add a short audit comment in `API.md`. Product GET queries stay
+>   light (no body Zod required).
+> - **Secrets leak:** `toProductDTO` / `toUserDTO` are the authority; add `pnpm assert:no-secrets`
+>   (rg over `src/` serializers + client) — sitemap/`products.data` seed file may still contain
+>   `basePrice` server-side; fail only if `basePrice`/`passwordHash` appear under `src/app/api` or
+>   DTO/mapper exports. Client bundle check: no `basePrice` string in feature client code.
+> - **Rate limit:** **in-memory** sliding window (no KV binding in P7 — `01` says KV later). Scope:
+>   `POST` auth `login`/`register`/`forgot-password` + `POST` bridal only (not `me`/`logout`).
+>   Limit ~20 / 60s / IP → `RATE_LIMITED` 429. Best-effort per isolate (acceptable for “basic”).
+> - **Security headers** (via `next.config` `headers()` for all routes): `X-Content-Type-Options`,
+>   `Referrer-Policy`, `X-Frame-Options: DENY`, `Permissions-Policy` (cam/mic/geo off). Keep
+>   `_headers` cache for `/_next/static/*`. No strict CSP in P7 (SVG placeholders).
+> - **API.md:** storefront live contract only (from `03`); short “Admin planned — see `08`” pointer.
+> - **SITE.url:** leave placeholder until domain purchased; note in CLAUDE/`API.md`.
+> - **Remote:** `db:migrate:remote` → `wrangler secret put` SESSION_SECRET + PASSWORD_PEPPER →
+>   `pnpm deploy`. Remote seed: `pnpm db:seed:remote` (wrangler D1 `--remote` batches; idempotent
+>   `onConflictDoNothing` — **no wipe**). Prod passwords still seed defaults — change before public
+>   go-live (not a P7 blocker).
+> - **[V]:** checklist sections for storefront P0–P7 + build gates + Cloudflare + Security + API
+>   quality; Admin/Integrations/Enhancements/Sourcing rows stay unchecked (later phases).
+- [x] Audit: every write validated with a contract schema; every route returns the envelope; errors mapped to codes.
+- [x] Ensure `basePrice` & `password_hash` never serialized (add a serialization test/grep).
+- [x] Basic rate-limit on `auth/*` + bridal (optional KV); security headers.
+- [x] `db:migrate:remote` + seed remote D1; set secrets; `deploy`.
+- [x] Smoke test production URL; verify cart/checkout/order still `noindex`.
+- [x] Write `API.md` at repo root (CLAUDE.md TODO); update `SITE.url` if domain purchased.
+- [x] [V] Full `07-checklist.md` passes against deployed Worker (storefront P0–P7 sections; later-phase rows remain open).
 
 ## Phases 8–12 — Admin dashboard
 The full, granular admin task list (auth & shell, products/categories CRUD + images, orders & users,

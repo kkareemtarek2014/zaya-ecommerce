@@ -152,7 +152,7 @@ export function ProductDetails({ id }: { id: string }) {
         </div>
       </div>
 
-      <ProductReviews />
+      <ProductReviews productId={product.id} />
       <RelatedProducts currentId={product.id} category={product.category} />
       <NewArrivals />
       <RecentlyViewed currentId={product.id} />

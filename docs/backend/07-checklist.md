@@ -16,40 +16,40 @@ Worker and the local build is green. Grouped by concern.
 - [ ] No component markup/classes changed except `basePrice` → `price`.
 
 ## Data integrity
-- [ ] Seeded counts: products 12, categories 7, governorates 27, promos 2, users 2 (customer+admin), shipping_zones 3, ≥1 sample order.
-- [ ] After `pnpm db:seed`, no manual data entry needed — storefront **and** admin show existing content.
-- [ ] `products.rating`/`review_count` match seeded reviews.
-- [ ] Order totals are **server-computed**; sending tampered prices from the client changes nothing.
-- [ ] Wallet balance = Σcredit − Σdebit (no stored balance drift).
+- [x] Seeded counts: products 12, categories 7, governorates 27, promos 2, users 2 (customer+admin), shipping_zones 3, ≥1 sample order.
+- [x] After `pnpm db:seed`, no manual data entry needed — storefront **and** admin show existing content.
+- [x] `products.rating`/`review_count` match seeded reviews.
+- [x] Order totals are **server-computed**; sending tampered prices from the client changes nothing.
+- [x] Wallet balance = Σcredit − Σdebit (no stored balance drift).
 
 ## Security
-- [ ] `basePrice` appears in **no** API response or client bundle (grep network + build).
-- [ ] `password_hash` never serialized; passwords stored as PBKDF2 (salt+pepper), not plaintext.
-- [ ] Session cookie is httpOnly, Secure, SameSite=Lax; no auth token in localStorage.
-- [ ] Protected routes/endpoints reject unauthenticated requests (401 / redirect).
-- [ ] Address/favorite/order access is ownership-scoped (can't read others' data).
-- [ ] Bridal upload enforces ≤25 MB and image/video only (413/400 otherwise).
-- [ ] Auth + bridal endpoints have basic rate limiting.
-- [ ] Login failure message is generic (no user enumeration); forgot-password always returns ok.
+- [x] `basePrice` appears in **no** API response or client bundle (grep network + build).
+- [x] `password_hash` never serialized; passwords stored as PBKDF2 (salt+pepper), not plaintext.
+- [x] Session cookie is httpOnly, Secure, SameSite=Lax; no auth token in localStorage.
+- [x] Protected routes/endpoints reject unauthenticated requests (401 / redirect).
+- [x] Address/favorite/order access is ownership-scoped (can't read others' data).
+- [x] Bridal upload enforces ≤25 MB and image/video only (413/400 otherwise).
+- [x] Auth + bridal endpoints have basic rate limiting.
+- [x] Login failure message is generic (no user enumeration); forgot-password always returns ok.
 
 ## API quality
-- [ ] Every endpoint returns the `{ ok, data | error }` envelope.
-- [ ] Every write validates input with a shared Zod contract; errors return `VALIDATION` + details.
-- [ ] Error codes/status mapping consistent (400/401/403/404/409/413/429/500).
-- [ ] DTO types are Zod-inferred and shared client↔server (no `any`).
+- [x] Every endpoint returns the `{ ok, data | error }` envelope.
+- [x] Every write validates input with a shared Zod contract; errors return `VALIDATION` + details.
+- [x] Error codes/status mapping consistent (400/401/403/404/409/413/429/500).
+- [x] DTO types are Zod-inferred and shared client↔server (no `any`).
 
 ## Feature flags & SEO
-- [ ] `middleware.ts` still 404s disabled routes; `wallet` off → `/api/account/wallet` 404s.
-- [ ] `generateMetadata`, Product/Organization/WebSite JSON-LD intact.
-- [ ] `sitemap.ts`/`robots.ts` unchanged; cart/checkout/order remain noindex/disallowed.
-- [ ] Arabic keywords preserved.
+- [x] `middleware.ts` still 404s disabled routes; `wallet` off → `/api/account/wallet` 404s.
+- [x] `generateMetadata`, Product/Organization/WebSite JSON-LD intact.
+- [x] `sitemap.ts`/`robots.ts` unchanged; cart/checkout/order remain noindex/disallowed.
+- [x] Arabic keywords preserved.
 
 ## Cloudflare
-- [ ] `zaya-db` (D1) created, migrated (remote), seeded.
-- [ ] `zaya-uploads` (R2) created; bridal media lands there.
-- [ ] `SESSION_SECRET`, `PASSWORD_PEPPER` set as Worker secrets.
-- [ ] `deploy` succeeds; production smoke test passes.
-- [ ] Runs within Free-tier limits for expected volume.
+- [x] `zaya-db` (D1) created, migrated (remote), seeded.
+- [x] `zaya-uploads` (R2) created; bridal media lands there.
+- [x] `SESSION_SECRET`, `PASSWORD_PEPPER` set as Worker secrets.
+- [x] `deploy` succeeds; production smoke test passes.
+- [x] Runs within Free-tier limits for expected volume.
 
 ## Admin dashboard (P8–P12 — see `08-admin-dashboard.md`)
 - [ ] `/admin` requires `admin` role; non-admins get 403; unauthenticated redirect to login.
@@ -116,10 +116,10 @@ Remaining:
 - [ ] Social proof (reviews + Instagram feed) and localized descriptions render; each behind a flag.
 
 ## Build gates (must be green every phase)
-- [ ] `pnpm build` — 0 errors.
-- [ ] `pnpm typecheck` — 0 errors.
-- [ ] `pnpm lint` — 0 errors (1 known benign RHF `watch()` warning allowed per CLAUDE.md).
+- [x] `pnpm build` — 0 errors.
+- [x] `pnpm typecheck` — 0 errors.
+- [x] `pnpm lint` — 0 errors (1 known benign RHF `watch()` warning allowed per CLAUDE.md).
 
 ## Docs
-- [ ] `API.md` created at repo root documenting the live contract (CLAUDE.md TODO closed).
-- [ ] `CLAUDE.md` "Known Placeholders / TODO" updated (dummy layer → seed-only; bridal upload done).
+- [x] `API.md` created at repo root documenting the live contract (CLAUDE.md TODO closed).
+- [x] `CLAUDE.md` "Known Placeholders / TODO" updated (dummy layer → seed-only; bridal upload done).

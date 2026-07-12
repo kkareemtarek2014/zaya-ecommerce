@@ -1,0 +1,85 @@
+#!/usr/bin/env node
+/**
+ * Phase 7 — assert basePrice / password hashes never leak via API or client UI.
+ */
+import { execSync } from 'node:child_process';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+function rg(pattern, globs) {
+  const globArgs = globs.map((g) => `--glob '${g}'`).join(' ');
+  try {
+    return execSync(`rg -n '${pattern}' ${globArgs} .`, {
+      cwd: root,
+      encoding: 'utf8',
+    }).trim();
+  } catch (err) {
+    if (err && typeof err === 'object' && 'status' in err && err.status === 1) {
+      return '';
+    }
+    throw err;
+  }
+}
+
+let failed = false;
+
+function fail(msg, hits) {
+  failed = true;
+  console.error(`FAIL: ${msg}`);
+  if (hits) console.error(hits);
+}
+
+const apiBase = rg('basePrice', ['src/app/api/**']);
+if (apiBase) fail('basePrice under src/app/api', apiBase);
+
+const apiPass = rg('passwordHash|password_hash', ['src/app/api/**']);
+if (apiPass) fail('password hash under src/app/api', apiPass);
+
+const clientBase = rg('basePrice', [
+  'src/features/**/*.{ts,tsx}',
+  'src/shared/components/**/*.{ts,tsx}',
+  'src/shared/contracts/**/*.ts',
+  'src/shared/lib/**/*.ts',
+]);
+if (clientBase) fail('basePrice in client/contracts (use price)', clientBase);
+
+const contractPass = rg('passwordHash|password_hash', [
+  'src/shared/contracts/**/*.ts',
+]);
+if (contractPass) fail('password hash in shared contracts', contractPass);
+
+const productService = fs.readFileSync(
+  path.join(root, 'src/server/services/product.service.ts'),
+  'utf8',
+);
+if (!/computeSellPrice\(row\.basePrice\)/.test(productService)) {
+  fail('product mapper should derive price from row.basePrice via computeSellPrice');
+}
+{
+  const withoutComments = productService
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/.*$/gm, '');
+  if (/[{,]\s*basePrice\s*:/.test(withoutComments)) {
+    fail('product service serializes basePrice as an object key');
+  }
+}
+
+const requireAuth = fs.readFileSync(
+  path.join(root, 'src/server/auth/require-auth.ts'),
+  'utf8',
+);
+if (!/export function toUserDTO/.test(requireAuth)) {
+  fail('toUserDTO missing');
+}
+if (/passwordHash/.test(requireAuth)) {
+  fail('toUserDTO / require-auth must not reference passwordHash');
+}
+
+if (failed) {
+  console.error('\nassert:no-secrets failed');
+  process.exit(1);
+}
+console.log('assert:no-secrets OK');
