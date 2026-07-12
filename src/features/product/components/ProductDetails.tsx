@@ -7,6 +7,7 @@ import { useProduct } from '@/features/shop';
 import { useCartStore } from '@/features/cart';
 import { formatEGP } from '@/shared/utils/price';
 import { FREE_SHIPPING_THRESHOLD } from '@/config/site.config';
+import { useStorefrontConfig } from '@/features/admin';
 import {
   Badge,
   Button,
@@ -24,6 +25,9 @@ export function ProductDetails({ id }: { id: string }) {
   const { data: product, isLoading } = useProduct(id);
   const addItem = useCartStore((s) => s.addItem);
   const addViewedProduct = useRecentlyViewedStore((s) => s.addProduct);
+  const { data: storefrontConfig } = useStorefrontConfig();
+  const freeShippingThreshold =
+    storefrontConfig?.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD;
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
@@ -138,7 +142,7 @@ export function ProductDetails({ id }: { id: string }) {
           <ul className="mt-4 space-y-3 rounded-(--radius-lg) bg-brand-blush/60 p-5 text-sm text-text-secondary">
             <li className="flex items-center gap-3">
               <Truck className="size-4 shrink-0 text-brand-primary" />
-              Free shipping on orders over {formatEGP(FREE_SHIPPING_THRESHOLD)}.
+              Free shipping on orders over {formatEGP(freeShippingThreshold)}.
             </li>
             <li className="flex items-center gap-3">
               <ShieldCheck className="size-4 shrink-0 text-brand-primary" />

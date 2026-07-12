@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ShoppingBag } from 'lucide-react';
 import { formatEGP } from '@/shared/utils/price';
 import { FREE_SHIPPING_THRESHOLD } from '@/config/site.config';
+import { useStorefrontConfig } from '@/features/admin';
 import { Button } from '@/shared/components/ui';
 import { useHydrated } from '@/shared/hooks/useHydrated';
 import {
@@ -22,6 +23,9 @@ export function CartView() {
   const subtotal = useCartStore(selectCartSubtotal);
   const discount = useCartStore(selectCartDiscount);
   const total = useCartStore(selectCartTotal);
+  const { data: storefrontConfig } = useStorefrontConfig();
+  const freeShippingThreshold =
+    storefrontConfig?.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD;
 
   if (!mounted) return null;
 
@@ -38,7 +42,7 @@ export function CartView() {
   }
 
   const discountedSubtotal = subtotal - discount;
-  const remainingForFree = FREE_SHIPPING_THRESHOLD - discountedSubtotal;
+  const remainingForFree = freeShippingThreshold - discountedSubtotal;
 
   return (
     <div className="grid gap-10 lg:grid-cols-[1fr_360px]">

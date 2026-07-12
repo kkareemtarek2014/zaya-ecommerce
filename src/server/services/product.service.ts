@@ -6,15 +6,18 @@ import * as categoriesRepo from '@/server/repositories/categories.repo';
 import * as governoratesRepo from '@/server/repositories/governorates.repo';
 import * as productsRepo from '@/server/repositories/products.repo';
 import type { ProductRow } from '@/server/repositories/products.repo';
-import { computeSellPrice } from '@/server/services/pricing.service';
+import {
+  computeSellPrice,
+  getProfitMargin,
+} from '@/server/services/pricing.service';
 
 /** Maps a DB row → public ProductDTO. Never exposes basePrice. */
-export function toProductDTO(row: ProductRow): ProductDTO {
+export function toProductDTO(row: ProductRow, margin: number): ProductDTO {
   const dto: ProductDTO = {
     id: row.id,
     name: row.name,
     category: row.categorySlug,
-    price: computeSellPrice(row.basePrice),
+    price: computeSellPrice(row.basePrice, margin),
     description: row.description,
     images: row.images,
     rating: row.rating,
@@ -43,18 +46,19 @@ export type ListProductsInput = {
   q?: string;
 };
 
-export async function listProducts(input: ListProductsInput = {}): Promise<ProductDTO[]> {
+export async function listProducts(
+  input: ListProductsInput = {},
+): Promise<ProductDTO[]> {
   const db = await getRequestDb();
+  const margin = await getProfitMargin(db);
   const rows = await productsRepo.findProducts(db, {
     category: input.category,
     featured: input.featured,
     sort: input.sort,
     q: input.q,
   });
-  let dtos = rows.map(toProductDTO);
+  let dtos = rows.map((r) => toProductDTO(r, margin));
 
-  // Client-side sort keys (featured / best-selling) are applied in the shop UI.
-  // When API sort is price-*, basePrice order ≈ sell-price order (same margin).
   if (input.q?.trim() && !input.sort) {
     dtos = dtos.slice(0, 8);
   }
@@ -63,15 +67,17 @@ export async function listProducts(input: ListProductsInput = {}): Promise<Produ
 
 export async function getProduct(id: string): Promise<ProductDTO> {
   const db = await getRequestDb();
+  const margin = await getProfitMargin(db);
   const row = await productsRepo.findProductById(db, id);
   if (!row) throw new NotFoundError('Product not found');
-  return toProductDTO(row);
+  return toProductDTO(row, margin);
 }
 
 export async function getProductOrNull(id: string): Promise<ProductDTO | null> {
   const db = await getRequestDb();
+  const margin = await getProfitMargin(db);
   const row = await productsRepo.findProductById(db, id);
-  return row ? toProductDTO(row) : null;
+  return row ? toProductDTO(row, margin) : null;
 }
 
 export async function getRelated(
@@ -79,6 +85,7 @@ export async function getRelated(
   limit = 4,
 ): Promise<ProductDTO[]> {
   const db = await getRequestDb();
+  const margin = await getProfitMargin(db);
   const row = await productsRepo.findProductById(db, id);
   if (!row) throw new NotFoundError('Product not found');
   const related = await productsRepo.findRelatedProducts(
@@ -87,19 +94,21 @@ export async function getRelated(
     row.categorySlug,
     limit,
   );
-  return related.map(toProductDTO);
+  return related.map((r) => toProductDTO(r, margin));
 }
 
 export async function getNewArrivals(limit = 8): Promise<ProductDTO[]> {
   const db = await getRequestDb();
+  const margin = await getProfitMargin(db);
   const rows = await productsRepo.findNewArrivals(db, limit);
-  return rows.map(toProductDTO);
+  return rows.map((r) => toProductDTO(r, margin));
 }
 
 export async function searchProducts(query: string): Promise<ProductDTO[]> {
   const db = await getRequestDb();
+  const margin = await getProfitMargin(db);
   const rows = await productsRepo.searchProducts(db, query, 8);
-  return rows.map(toProductDTO);
+  return rows.map((r) => toProductDTO(r, margin));
 }
 
 export async function listCategories(): Promise<CategoryDTO[]> {
@@ -108,7 +117,9 @@ export async function listCategories(): Promise<CategoryDTO[]> {
   return rows.map(toCategoryDTO);
 }
 
-export async function getCategoryOrNull(slug: string): Promise<CategoryDTO | null> {
+export async function getCategoryOrNull(
+  slug: string,
+): Promise<CategoryDTO | null> {
   const db = await getRequestDb();
   const row = await categoriesRepo.findCategoryBySlug(db, slug);
   return row ? toCategoryDTO(row) : null;

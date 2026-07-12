@@ -1,20 +1,49 @@
+import type { ShippingZone } from '@/config/site.config';
 import {
   FREE_SHIPPING_THRESHOLD,
   SHIPPING_RATES,
 } from '@/config/site.config';
-import { getGovernorate } from '@/shared/data/governorates.data';
+
+export type ShippingPreviewConfig = {
+  freeShippingThreshold: number;
+  zoneFees: Record<ShippingZone, number>;
+};
+
+const DEFAULT_CONFIG: ShippingPreviewConfig = {
+  freeShippingThreshold: FREE_SHIPPING_THRESHOLD,
+  zoneFees: { ...SHIPPING_RATES },
+};
 
 /**
- * Shipping cost by governorate:
- *   Cairo & Giza → 50 EGP · nearby governorates → 80 EGP · far → 100 EGP.
- * Orders at/above FREE_SHIPPING_THRESHOLD ship free.
+ * Preview shipping for checkout UI. Authoritative total is always server-side.
+ * Pass effective config from `GET /api/storefront-config` when available.
  */
 export function getShippingCost(
-  governorateId: string,
+  zone: ShippingZone | undefined,
   subtotal: number,
+  config: ShippingPreviewConfig = DEFAULT_CONFIG,
 ): number {
-  if (subtotal >= FREE_SHIPPING_THRESHOLD) return 0;
-  const governorate = getGovernorate(governorateId);
-  if (!governorate) return SHIPPING_RATES.far;
-  return SHIPPING_RATES[governorate.zone];
+  if (subtotal >= config.freeShippingThreshold) return 0;
+  if (!zone) return config.zoneFees.far;
+  return config.zoneFees[zone];
+}
+
+export { DEFAULT_CONFIG as defaultShippingPreviewConfig };
+
+/** Build checkout preview config from public storefront API response. */
+export function buildShippingPreviewConfig(
+  config?: {
+    freeShippingThreshold: number;
+    shippingZones: { zone: ShippingZone; fee: number }[];
+  } | null,
+): ShippingPreviewConfig {
+  if (!config) return DEFAULT_CONFIG;
+  const zoneFees = { ...SHIPPING_RATES };
+  for (const z of config.shippingZones) {
+    zoneFees[z.zone] = z.fee;
+  }
+  return {
+    freeShippingThreshold: config.freeShippingThreshold,
+    zoneFees,
+  };
 }

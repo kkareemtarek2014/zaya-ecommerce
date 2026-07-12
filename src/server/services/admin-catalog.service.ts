@@ -14,7 +14,10 @@ import {
 } from '@/server/http/errors';
 import * as categoriesRepo from '@/server/repositories/categories.repo';
 import * as productsRepo from '@/server/repositories/products.repo';
-import { computeSellPrice } from '@/server/services/pricing.service';
+import {
+  computeSellPrice,
+  getProfitMargin,
+} from '@/server/services/pricing.service';
 import {
   deleteUploadObject,
   mediaUrlToKey,
@@ -31,13 +34,13 @@ function slugify(name: string): string {
     .slice(0, 48);
 }
 
-function toAdminProduct(row: ProductRow): AdminProductDTO {
+function toAdminProduct(row: ProductRow, margin: number): AdminProductDTO {
   const dto: AdminProductDTO = {
     id: row.id,
     name: row.name,
     category: row.categorySlug,
     basePrice: row.basePrice,
-    price: computeSellPrice(row.basePrice),
+    price: computeSellPrice(row.basePrice, margin),
     description: row.description,
     images: row.images ?? [],
     rating: row.rating,
@@ -77,6 +80,7 @@ export async function listAdminProducts(url: URL): Promise<Paginated<AdminProduc
   const inStockParam = url.searchParams.get('inStock');
 
   const db = await getRequestDb();
+  const margin = await getProfitMargin(db);
   const { rows, total } = await productsRepo.findProductsAdmin(db, {
     page,
     pageSize,
@@ -89,7 +93,7 @@ export async function listAdminProducts(url: URL): Promise<Paginated<AdminProduc
   });
 
   return {
-    items: rows.map(toAdminProduct),
+    items: rows.map((r) => toAdminProduct(r, margin)),
     page,
     pageSize,
     total,
@@ -99,9 +103,10 @@ export async function listAdminProducts(url: URL): Promise<Paginated<AdminProduc
 
 export async function getAdminProduct(id: string): Promise<AdminProductDTO> {
   const db = await getRequestDb();
+  const margin = await getProfitMargin(db);
   const row = await productsRepo.findProductByIdAny(db, id);
   if (!row) throw new NotFoundError('Product not found');
-  return toAdminProduct(row);
+  return toAdminProduct(row, margin);
 }
 
 export async function createAdminProduct(raw: unknown): Promise<AdminProductDTO> {
@@ -137,7 +142,8 @@ export async function createAdminProduct(raw: unknown): Promise<AdminProductDTO>
     stockQty,
     reservedQty: 0,
   });
-  return toAdminProduct(row);
+  const margin = await getProfitMargin(db);
+  return toAdminProduct(row, margin);
 }
 
 export async function updateAdminProduct(
@@ -171,7 +177,8 @@ export async function updateAdminProduct(
     tags: parsed.data.tags ?? null,
     stockQty,
   });
-  return toAdminProduct(row);
+  const margin = await getProfitMargin(db);
+  return toAdminProduct(row, margin);
 }
 
 export async function deleteAdminProduct(id: string): Promise<{ ok: true }> {
@@ -212,7 +219,8 @@ export async function addProductImages(
     urls.push(uploaded.url);
   }
   const row = await productsRepo.updateProduct(db, id, { images: urls });
-  return toAdminProduct(row);
+  const margin = await getProfitMargin(db);
+  return toAdminProduct(row, margin);
 }
 
 export async function removeProductImage(
@@ -231,7 +239,8 @@ export async function removeProductImage(
   if (key) await deleteUploadObject(key).catch(() => undefined);
 
   const row = await productsRepo.updateProduct(db, id, { images });
-  return toAdminProduct(row);
+  const margin = await getProfitMargin(db);
+  return toAdminProduct(row, margin);
 }
 
 export async function listAdminCategories(): Promise<AdminCategoryDTO[]> {

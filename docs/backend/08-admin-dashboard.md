@@ -76,12 +76,12 @@ type Paginated<T> = { items: T[]; page: number; pageSize: number; total: number;
   ```ts
   { revenueTotal: number; ordersCount: number; productsCount: number; usersCount: number;
     ordersByStatus: Record<OrderStatus, number>;
-    recentOrders: OrderDTO[];        // last 5
+    recentOrders: AdminOrderDTO[];        // last 5 (+ userId)
     latestProducts: AdminProductDTO[]; // last 5
-    salesByDay: { date: string; total: number }[]; // last 14 days
+    salesByDay: { date: string; total: number }[]; // last 14 UTC days; exclude cancelled
   }
   ```
-
+  `revenueTotal` / daily totals exclude `cancelled` orders.
 ### Products (`AdminProductDTO` includes `basePrice` — admin-only, never on storefront)
 - `GET /api/admin/products` — query `q`, `category`, `inStock`, `featured`, `sort`, `page`, `pageSize` → `Paginated<AdminProductDTO>`.
 - `POST /api/admin/products` — body = full product (name, categorySlug, **basePrice**, compareAtPrice?, description, images[], inStock, featured, tags[]). Server derives `price`. → 201 `AdminProductDTO`.
@@ -110,21 +110,30 @@ type Paginated<T> = { items: T[]; page: number; pageSize: number; total: number;
 - `DELETE /api/admin/users/[id]` — block deleting self / last admin; DB cascades favorites/addresses/sessions/wallet; orders/reviews/bridal `user_id` → null. → `{ ok:true }`.
 
 ### Locations
-- `GET /api/admin/governorates` → `Governorate[]`.
-- `POST/PUT /api/admin/governorates[/[id]]` — `{ id, name, zone }` (zone ∈ shipping_zones). `DELETE` (block if used by orders/addresses → `CONFLICT`).
+- `GET /api/admin/governorates` → `GovernorateDTO[]`.
+- `POST /api/admin/governorates` — `{ id, name, zone }` (zone ∈ shipping_zones). `PUT /[id]` — `{ name?, zone? }`.
+  `DELETE /[id]` (block if used by orders/addresses → `CONFLICT`).
 - `GET /api/admin/shipping-zones` → `{ zone, label, fee }[]`.
-- `PUT /api/admin/shipping-zones/[zone]` — `{ fee }` → updates delivery fee (was `SHIPPING_RATES`).
+- `PUT /api/admin/shipping-zones/[zone]` — `{ fee }` (≥ 0) → updates delivery fee. Zones are fixed (no CRUD on zone keys).
 
 ### Promos
-- `GET /api/admin/promos` → `PromoDTO[]`. `POST` create, `PUT /[code]` edit, `DELETE /[code]`, `PATCH /[code]` toggle `active`.
+- `GET /api/admin/promos` → `AdminPromoDTO[]`. `POST` create, `PUT /[code]` edit (code immutable), `DELETE /[code]`,
+  `PATCH /[code]` `{ active }` toggle.
 
 ### Bridal requests
-- `GET /api/admin/bridal-requests` — `status`, `page` → `Paginated<BridalRequestDTO>` (media via signed/served R2 URL).
-- `GET /api/admin/bridal-requests/[id]`, `PATCH /[id]` `{ status: 'pending'|'answered' }`.
+- `GET /api/admin/bridal-requests` — `status`, `page`, `pageSize` → `Paginated<AdminBridalRequestDTO>`
+  (`mediaUrl` via `/api/media/…` when `fileKey` set).
+- `GET /api/admin/bridal-requests/[id]`, `PATCH /[id]` `{ status: 'pending'|'answered' }`. No delete in P11.
 
 ### Settings
-- `GET /api/admin/settings` → `{ profitMargin, freeShippingThreshold, siteName, siteTagline, ... }`.
-- `PUT /api/admin/settings` — partial update, validated (margin 0.20–0.30 per business rule) → updated settings. **Pricing/shipping services read effective settings** (DB overrides `site.config.ts` defaults).
+- `GET /api/admin/settings` → `{ profitMargin, freeShippingThreshold, siteName, siteTagline, siteUrl }`.
+- `PUT /api/admin/settings` — partial update; `profitMargin` clamped 0.20–0.30; threshold ≥ 0.
+  **Pricing/shipping services read effective settings** (DB overrides `site.config.ts` defaults).
+  Logo/SEO/social/maintenance = later (`10` §18).
+
+### Storefront config (public, P11)
+- `GET /api/storefront-config` → `{ freeShippingThreshold, shippingZones: { zone, label, fee }[] }` —
+  powers checkout/cart shipping preview. Never includes `profit_margin`.
 
 Every write is validated with a Zod schema in `shared/contracts/admin.*`, returns the standard envelope,
 and (optionally) writes an `audit_log` row (`02` §2.16).
@@ -266,12 +275,14 @@ users, and the sample order — matching what the frontend shows today.
   (list/view/edit/delete with self/last-admin guards). **Out of P10:** Bosta/Paymob admin (`09`),
   `order_status_history`, `audit_log`. **Verify:** illegal status rejected; user edits persist;
   last-admin/self guards.
-- **P11 — Locations, Promos, Bridal, Settings:** governorates + shipping zones editing (pricing/shipping
-  read effective settings), promo CRUD, bridal request review, settings form (margin clamp).
-  **Verify:** change a zone fee → checkout shipping updates; margin change → storefront prices update.
-- **P12 — Dashboard stats + hardening:** `/api/admin/stats`, StatCards, sales chart, recent orders/
-  latest products; `audit_log`; rate-limit admin auth; deploy. **Verify:** stats match DB; full
-  checklist (`07` admin section) passes on the deployed Worker.
+- **P11 — Locations, Promos, Bridal, Settings:** governorates + shipping-zone fees; promo CRUD;
+  bridal review; settings (margin 0.20–0.30); `computeSellPrice` + checkout preview read effective
+  config; public `GET /api/storefront-config`. **Out:** audit_log, site chrome/SEO settings,
+  landed-cost. **Verify:** zone fee → checkout shipping; margin → storefront prices.
+- **P12 — Dashboard stats + hardening:** `/api/admin/stats` + live dashboard (StatCards, CSS sales
+  chart, recent orders, latest products); **new** `audit_log` migration + write-on-mutation (no
+  viewer yet); rate-limit `/api/admin/**` (60/min/IP). **Out:** audit viewer/bell (`10`). **Verify:**
+  stats match DB; migrate + ⏳ deploy smoke.
 
 ## 10. Admin task checklist
 
@@ -289,19 +300,21 @@ users, and the sample order — matching what the frontend shows today.
 - [ ] ⏳ [V] create shows on storefront; delete blocked when referenced; images in R2.
 
 **P10** *(revision locked in `06-tasks.md` — one-step status + cancel; AdminOrderDTO+userId; no Bosta/Paymob/audit)*
-- [ ] Orders admin API (list/filter/detail/status transition) + pages.
-- [ ] Users admin API (list/view/edit/delete + guards) + pages.
-- [ ] [V] status transitions validated; last-admin/self guards.
+- [x] Orders admin API (list/filter/detail/status transition) + pages.
+- [x] Users admin API (list/view/edit/delete + guards) + pages.
+- [ ] ⏳ [V] status transitions validated; last-admin/self guards.
 
-**P11**
-- [ ] Locations: governorates CRUD + shipping zones editing; pricing/shipping read effective settings.
-- [ ] Promos CRUD; Bridal requests review; Settings form (margin 0.20–0.30 clamp).
-- [ ] [V] zone-fee change alters checkout shipping; margin change alters storefront prices.
+**P11** *(revision locked in `06-tasks.md` — effective settings; public storefront-config; no audit/logo/landed-cost)*
+- [x] Locations: governorates CRUD + shipping zones fee edit; pricing/shipping read effective settings.
+- [x] Promos CRUD; Bridal requests review; Settings form (margin 0.20–0.30 clamp).
+- [x] Public `GET /api/storefront-config`; checkout preview uses it.
+- [ ] ⏳ [V] zone-fee change alters checkout shipping; margin change alters storefront prices.
 
-**P12**
+**P12** *(revision locked in `06-tasks.md` — AdminStatsDTO; audit write-only; admin 60/min rate-limit; CSS chart)*
+- [ ] `audit_log` migration + `writeAuditLog` on admin mutations (no viewer).
 - [ ] `GET /api/admin/stats`; dashboard cards + sales chart + recent orders/latest products.
-- [ ] `audit_log` on mutations; admin rate-limit; deploy + smoke test.
-- [ ] [V] stats match DB; `07` admin checklist green.
+- [ ] Rate-limit `/api/admin/**` (60/min/IP).
+- [ ] [V] stats match DB; ⏳ migrate remote + deploy smoke.
 
 ## 11. Definition of done
 Admin can manage products, categories, orders, users, locations, promos, bridal requests, and settings;

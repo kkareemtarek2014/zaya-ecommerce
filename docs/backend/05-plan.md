@@ -97,9 +97,10 @@ The storefront migration (P0–P7) ships first. The admin dashboard is layered o
 - **P10 — Orders & Users:** orders list/detail/status (one-step forward + cancel rules); users
   list/view/edit/delete (self/last-admin guards). Bosta/Paymob admin deferred to P13–P14.
 - **P11 — Locations, Promos, Bridal, Settings:** governorates + shipping-zone fees, promo CRUD, bridal
-  request review, settings page (margin 0.20–0.30 clamp). Pricing/shipping read effective settings.
-- **P12 — Dashboard stats + hardening:** `/api/admin/stats`, stat cards + sales chart + recent orders/
-  latest products, `audit_log`, admin rate-limit, deploy.
+  request review, settings (margin clamp), effective pricing + public storefront-config for checkout
+  preview. Audit/logo/landed-cost deferred.
+- **P12 — Dashboard stats + hardening:** `/api/admin/stats` + dashboard UI; `audit_log` migration
+  (write-on-mutation, viewer later); rate-limit admin APIs; deploy smoke.
 
 > **Seeders (critical):** the Phase 1 seeder is extended so **every** static dataset — products,
 > categories, governorates, shipping rates, promos, users (+admin), reviews, wallet, and the sample

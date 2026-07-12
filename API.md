@@ -115,7 +115,17 @@ Wallet returns **404** while feature flag `wallet` is OFF (same as `/account/wal
 
 ---
 
-## Admin (Phase 8–9)
+## Storefront config
+
+| Method | Path | Auth | Notes |
+| --- | --- | --- | --- |
+| GET | `/api/storefront-config` | — | `{ freeShippingThreshold, shippingZones }` — checkout/cart preview. No `profit_margin`. |
+
+Sell prices use effective `profit_margin` from `settings` (server-only). Shipping totals on orders use DB zone fees + threshold.
+
+---
+
+## Admin (Phase 8–11)
 
 All `/api/admin/**` require session + `role=admin` (`requireAdmin`).
 
@@ -130,9 +140,22 @@ All `/api/admin/**` require session + `role=admin` (`requireAdmin`).
 | GET/POST | `/api/admin/categories` | Full list (incl. `sortOrder`) |
 | PUT/DELETE | `/api/admin/categories/[slug]` | DELETE → `CONFLICT` if products remain |
 | POST | `/api/admin/categories/[slug]/image` | `multipart` · single `file` |
+| GET | `/api/admin/orders` | Paginated `?q&status&governorate&dateFrom&dateTo&page&pageSize` · `AdminOrderDTO` (+ `userId`) |
+| GET | `/api/admin/orders/[id]` | Detail with items |
+| PATCH | `/api/admin/orders/[id]/status` | One-step forward or `cancelled` (not from delivered) |
+| GET | `/api/admin/users` | Paginated `?q&role&page&pageSize` · `AdminUserDTO` |
+| GET/PUT/DELETE | `/api/admin/users/[id]` | Email immutable; self/last-admin guards on demote/delete |
+| GET/POST | `/api/admin/governorates` | CRUD · DELETE → `CONFLICT` if orders/addresses reference |
+| PUT/DELETE | `/api/admin/governorates/[id]` | |
+| GET | `/api/admin/shipping-zones` | Fixed zones |
+| PUT | `/api/admin/shipping-zones/[zone]` | `{ fee }` ≥ 0 |
+| GET/POST | `/api/admin/promos` | |
+| PUT/PATCH/DELETE | `/api/admin/promos/[code]` | PATCH `{ active }`; code immutable on PUT |
+| GET | `/api/admin/bridal-requests` | Paginated `?status&page&pageSize` |
+| GET/PATCH | `/api/admin/bridal-requests/[id]` | PATCH `{ status }` |
+| GET/PUT | `/api/admin/settings` | Margin 0.20–0.30; threshold ≥ 0 |
 
-UI: `/admin`, `/admin/login`, `/admin/forbidden`, `/admin/products*`, `/admin/categories*` (noindex).
-Orders/users/settings: P10–P12 — see `docs/backend/08`.
+UI: `/admin/**` modules through settings (noindex). Dashboard stats: P12 — see `docs/backend/08`.
 
 ---
 

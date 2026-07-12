@@ -40,10 +40,12 @@ export function assertRateLimit(
   }
 }
 
-/** Rate-limit auth login/register/forgot and bridal submit by client IP. */
+/** Rate-limit auth login/register/forgot, bridal submit, and admin APIs by client IP. */
 export function rateLimitByIp(
   request: Request,
-  route: 'auth-login' | 'auth-register' | 'auth-forgot' | 'bridal',
+  route: 'auth-login' | 'auth-register' | 'auth-forgot' | 'bridal' | 'admin',
+  limit?: number,
 ): void {
-  assertRateLimit(`${route}:${getClientIp(request)}`);
+  const resolvedLimit = limit ?? (route === 'admin' ? 60 : DEFAULT_LIMIT);
+  assertRateLimit(`${route}:${getClientIp(request)}`, resolvedLimit);
 }

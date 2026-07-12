@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ShoppingBag, Trash2 } from 'lucide-react';
 import { formatEGP } from '@/shared/utils/price';
 import { FREE_SHIPPING_THRESHOLD } from '@/config/site.config';
+import { useStorefrontConfig } from '@/features/admin';
 import { Button, Drawer, QuantityStepper } from '@/shared/components/ui';
 import { useHydrated } from '@/shared/hooks/useHydrated';
 import { CartRecommendations } from './CartRecommendations';
@@ -37,9 +38,12 @@ export function CartDrawer() {
   
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState<string | null>(null);
+  const { data: storefrontConfig } = useStorefrontConfig();
+  const freeShippingThreshold =
+    storefrontConfig?.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD;
 
   const discountedSubtotal = subtotal - discount;
-  const remainingForFree = FREE_SHIPPING_THRESHOLD - discountedSubtotal;
+  const remainingForFree = freeShippingThreshold - discountedSubtotal;
 
   return (
     <>

@@ -215,10 +215,82 @@ are green. Pricing/shipping must read **effective settings** once P11 lands.
 > - **UI:** `/admin/orders`, `/admin/orders/[id]`, `/admin/users`, `/admin/users/[id]`; reuse P8/P9
 >   DataTable/SearchInput/Pagination/ConfirmDialog/Toast; `OrderStatusSelect` + `UserForm`;
 >   un-`soon` Orders & Users nav.
-- [ ] Orders admin API (list/filter/detail/status) + `AdminOrderDTO`.
-- [ ] Users admin API (list/view/edit/delete + guards) + `AdminUserDTO`.
-- [ ] Order/user pages (`OrderStatusSelect`, `UserForm`, confirm delete).
-- [ ] [V] illegal status rejected; self/last-admin guards; edits persist.
+> **Reviewed 2026-07-12 — complete.** Admin orders/users APIs + list/detail UI; one-step status +
+> cancel; self/last-admin guards. `typecheck`/`lint` green. ⏳ live status/guard smoke on your machine.
+- [x] Orders admin API (list/filter/detail/status) + `AdminOrderDTO`.
+- [x] Users admin API (list/view/edit/delete + guards) + `AdminUserDTO`.
+- [x] Order/user pages (`OrderStatusSelect`, `UserForm`, confirm delete).
+- [ ] ⏳ [V] illegal status rejected; self/last-admin guards; edits persist.
+
+### Phase 11 — Locations, Promos, Bridal, Settings
+> **Revision notes (locked, vs CLAUDE.md + `08` §3/§4/§6/§10 + live schema/seed):**
+> - **Scope:** governorates CRUD + shipping-zone **fee** edit; promo CRUD (+ active toggle); bridal
+>   list/detail + mark answered; settings form. Wire **effective settings** into pricing (shipping
+>   already reads DB). Out: `audit_log` (P12), logo/favicon/social/SEO/maintenance (`10` §18),
+>   landed-cost / FX pricing (`11`), Bosta mapping, promo `max_redemptions`, bridal delete/reply text.
+> - **No new migration** — `governorates`, `shipping_zones`, `promos`, `bridal_requests`, `settings`
+>   already seeded (`profit_margin`, `free_shipping_threshold`, `site_name`, `site_tagline`, `site_url`).
+> - **Effective config:** DB value if present, else `site.config.ts` fallback.
+>   - `computeSellPrice(db, basePrice)` reads `profit_margin` (async). Pure math stays
+>     `getSellPrice(basePrice, margin?)` in `shared/utils/price.ts`.
+>   - Shipping already uses `shipping_zones.fee` + `free_shipping_threshold` — keep that.
+> - **Public storefront config (for checkout/cart preview):** `GET /api/storefront-config` →
+>   `{ freeShippingThreshold, shippingZones: { zone, label, fee }[] }`. **Never** expose
+>   `profit_margin`. Checkout client shipping preview must use this (not static `SHIPPING_RATES`).
+> - **Locations API:** `GET/POST /api/admin/governorates`; `PUT/DELETE /[id]` — zone ∈
+>   `cairo_giza|near|far`; DELETE → `CONFLICT` if orders/addresses reference. `GET /api/admin/shipping-zones`;
+>   `PUT /[zone]` `{ fee }` (fee ≥ 0 int). Zones are fixed (no create/delete zone).
+> - **Promos API:** `GET/POST /api/admin/promos`; `PUT /[code]` (code immutable); `DELETE /[code]`;
+>   `PATCH /[code]` `{ active }`. Percentage `value` ∈ (0, 1]; fixed `value` > 0. Codes stored uppercased.
+> - **Bridal API:** `GET /api/admin/bridal-requests` (`status`, `page`, `pageSize=20`); `GET /[id]`;
+>   `PATCH /[id]` `{ status: pending|answered }`. `AdminBridalRequestDTO` includes `mediaUrl` via
+>   `/api/media/{fileKey}` when present.
+> - **Settings API:** `GET/PUT /api/admin/settings` — partial update of known keys only.
+>   `profit_margin` clamped **0.20–0.30**; `free_shipping_threshold` ≥ 0 int; site strings trimmed.
+> - **UI:** `/admin/locations` (Tabs: governorates + zones), `/admin/promos`, `/admin/bridal`,
+>   `/admin/bridal/[id]`, `/admin/settings`; un-`soon` those nav items; reuse P8 Tabs/DataTable/Toast/
+>   ConfirmDialog; `SettingsForm`, `ShippingZoneForm` / inline fee edit, `PromoForm`.
+> **Reviewed 2026-07-12 — complete.** Locations/promos/bridal/settings admin + effective
+> `profit_margin` in `computeSellPrice`; public `GET /api/storefront-config`; checkout preview wired.
+> `typecheck`/`lint`/`assert:no-secrets` green. ⏳ live zone-fee + margin smoke on your machine.
+- [x] Locations APIs + pages; shipping/pricing read effective settings; public storefront-config.
+- [x] Promos CRUD + Bridal review APIs/pages.
+- [x] Settings API + form (margin clamp).
+- [ ] ⏳ [V] zone fee → checkout shipping; margin → storefront prices.
+
+### Phase 12 — Dashboard stats + hardening
+> **Revision notes (locked, vs CLAUDE.md + `08` §3/§5/§9/§10 + `02` §2.16 + `07` admin):**
+> - **Scope:** `GET /api/admin/stats` + live `/admin` dashboard (StatCards, sales chart, recent
+>   orders, latest products); `audit_log` table + write on admin mutations; rate-limit admin APIs.
+>   Out: audit **viewer** / activity feed / notifications bell (`10` §16/§20 — P18+), chart libraries
+>   (CSS/SVG bars only), Paymob/Bosta, inventory/timeline enhancements.
+> - **Migration required:** add `audit_log` (`id`, `actor_id` FK→users, `action`, `entity`,
+>   `entity_id`, `meta` JSON null, `created_at`). Generate via drizzle; run local + remote migrate.
+> - **`AdminStatsDTO`:**
+>   `{ revenueTotal, ordersCount, productsCount, usersCount, ordersByStatus,
+>     recentOrders: AdminOrderDTO[5], latestProducts: AdminProductDTO[5],
+>     salesByDay: { date: YYYY-MM-DD, total }[14] }`.
+>   - `revenueTotal` / `salesByDay`: sum `orders.total` where `status ≠ cancelled`.
+>   - `ordersByStatus`: all `OrderStatus` keys present (0 if none).
+>   - `salesByDay`: last 14 UTC calendar days, missing days → `total: 0`.
+>   - Products count = all rows (any status); users = all rows.
+> - **Audit writes:** helper `writeAuditLog({ actorId, action, entity, entityId, meta? })` after
+>   successful admin creates/updates/deletes/status changes. Actions:
+>   `create|update|delete|status_change`. Entities include `product|category|order|user|promo|
+>   governorate|shipping_zone|settings|bridal_request`. Best-effort (log + continue if insert fails —
+>   never fail the user-facing mutation). **No** audit list UI in P12.
+> - **Rate-limit:** extend `rateLimitByIp` with route `'admin'` — **60 req / 60s / IP** on all
+>   `/api/admin/**` (call at start of `requireAdmin` or each admin route). Auth login already limited
+>   (P7).
+> - **UI:** replace placeholder `/admin` with client dashboard; `StatCard`, `SalesChart` (CSS bars),
+>   `RecentOrders`, `LatestProducts` in `features/admin/components/`. Links into existing modules.
+>   No new nav item (Dashboard already active).
+> - **Deploy:** ⏳ `pnpm run deploy` + remote migrate for `audit_log` is a verify step on your machine
+>   (agent implements code + local migrate scripts; does not force production deploy).
+- [ ] `audit_log` schema + migration; `writeAuditLog` wired to admin mutations.
+- [ ] `GET /api/admin/stats` + dashboard UI (cards, chart, recent/latest).
+- [ ] Admin API rate-limit (60/min/IP).
+- [ ] [V] stats match DB; migrate audit_log; ⏳ deploy smoke.
 
 ## Phases 16–23 — Production enhancements
 The full, granular enhancement task list (inventory ⭐, order timeline ⭐, bulk ⭐, duplication ⭐, audit

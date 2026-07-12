@@ -59,8 +59,10 @@ const productService = fs.readFileSync(
   path.join(root, 'src/server/services/product.service.ts'),
   'utf8',
 );
-if (!/computeSellPrice\(row\.basePrice\)/.test(productService)) {
-  fail('product mapper should derive price from row.basePrice via computeSellPrice');
+if (!/computeSellPrice\(row\.basePrice(?:,\s*\w+)?\)/.test(productService)) {
+  fail(
+    'product mapper should derive price from row.basePrice via computeSellPrice',
+  );
 }
 {
   const withoutComments = productService

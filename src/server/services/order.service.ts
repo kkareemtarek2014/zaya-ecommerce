@@ -15,7 +15,10 @@ import {
 import * as ordersRepo from '@/server/repositories/orders.repo';
 import type { OrderItemRow, OrderRow } from '@/server/repositories/orders.repo';
 import * as governoratesRepo from '@/server/repositories/governorates.repo';
-import { computeSellPrice } from '@/server/services/pricing.service';
+import {
+  computeSellPrice,
+  getProfitMargin,
+} from '@/server/services/pricing.service';
 import { validatePromo } from '@/server/services/promo.service';
 import { getShippingCost } from '@/server/services/shipping.service';
 
@@ -93,6 +96,7 @@ export async function createOrder(
   }
 
   const byId = new Map(rows.map((r) => [r.id, r]));
+  const margin = await getProfitMargin(db);
   const lineItems: {
     id: string;
     productId: string;
@@ -112,7 +116,7 @@ export async function createOrder(
     if (!product.inStock) {
       throw new ConflictError(`${product.name} is out of stock`);
     }
-    const unitPrice = computeSellPrice(product.basePrice);
+    const unitPrice = computeSellPrice(product.basePrice, margin);
     subtotal += unitPrice * line.quantity;
     lineItems.push({
       id: `oi_${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`,

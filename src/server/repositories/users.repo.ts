@@ -92,10 +92,10 @@ export async function updateUserAdmin(
 }
 
 export async function deleteUser(db: Db, userId: string): Promise<boolean> {
-  const result = await db.delete(users).where(eq(users.id, userId));
-  // D1/sqlite: changes may be on result; treat missing as false via re-read
-  const still = await findUserById(db, userId);
-  return still == null && result !== undefined;
+  const existing = await findUserById(db, userId);
+  if (!existing) return false;
+  await db.delete(users).where(eq(users.id, userId));
+  return true;
 }
 
 export async function countAdmins(db: Db): Promise<number> {

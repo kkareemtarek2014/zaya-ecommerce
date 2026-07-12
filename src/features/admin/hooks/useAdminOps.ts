@@ -1,0 +1,84 @@
+'use client';
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type {
+  AdminOrderStatusPatch,
+  AdminUserWrite,
+} from '@/shared/contracts/admin-ops.contract';
+import {
+  adminOrdersService,
+  adminUsersService,
+  type AdminOrderListParams,
+  type AdminUserListParams,
+} from '../services/admin-ops.service';
+
+export const adminOpsKeys = {
+  orders: (params: AdminOrderListParams) =>
+    ['admin', 'orders', params] as const,
+  order: (id: string) => ['admin', 'orders', id] as const,
+  users: (params: AdminUserListParams) => ['admin', 'users', params] as const,
+  user: (id: string) => ['admin', 'users', id] as const,
+};
+
+export function useAdminOrders(params: AdminOrderListParams) {
+  return useQuery({
+    queryKey: adminOpsKeys.orders(params),
+    queryFn: () => adminOrdersService.list(params),
+  });
+}
+
+export function useAdminOrder(id: string) {
+  return useQuery({
+    queryKey: adminOpsKeys.order(id),
+    queryFn: () => adminOrdersService.get(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useUpdateAdminOrderStatus(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AdminOrderStatusPatch) =>
+      adminOrdersService.updateStatus(id, input),
+    onSuccess: (order) => {
+      qc.setQueryData(adminOpsKeys.order(id), order);
+      void qc.invalidateQueries({ queryKey: ['admin', 'orders'] });
+    },
+  });
+}
+
+export function useAdminUsers(params: AdminUserListParams) {
+  return useQuery({
+    queryKey: adminOpsKeys.users(params),
+    queryFn: () => adminUsersService.list(params),
+  });
+}
+
+export function useAdminUser(id: string) {
+  return useQuery({
+    queryKey: adminOpsKeys.user(id),
+    queryFn: () => adminUsersService.get(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useUpdateAdminUser(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AdminUserWrite) => adminUsersService.update(id, input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      void qc.invalidateQueries({ queryKey: adminOpsKeys.user(id) });
+    },
+  });
+}
+
+export function useDeleteAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminUsersService.delete(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+    },
+  });
+}

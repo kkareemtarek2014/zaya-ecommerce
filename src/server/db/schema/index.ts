@@ -13,3 +13,4 @@ export { walletTransactions } from './wallet-transactions';
 export { bridalRequests } from './bridal-requests';
 export { shippingZones } from './shipping-zones';
 export { settings } from './settings';
+export { auditLog } from './audit-log';

@@ -30,21 +30,22 @@ R2), add an admin dashboard, and integrate Bosta + Paymob lives in **`docs/backe
 | Domain (placeholder) | `SITE.url` — update when real domain bought | |
 
 **Pricing model (current):** products store `basePrice` (sourcing cost in EGP). Customer price =
-`getSellPrice()` in `src/shared/utils/price.ts` — cost + margin, rounded UP to nearest 5 EGP. Never
-hardcode selling prices. `basePrice` is a secret sourcing cost and must **never** be sent to the browser
-once the backend exists (only admin sees it).
+server `computeSellPrice(db, basePrice)` — effective `profit_margin` from `settings` (fallback
+`PROFIT_MARGIN`), rounded UP to nearest 5 EGP via `getSellPrice(base, margin)`. Never hardcode selling
+prices. `basePrice` is a secret sourcing cost and must **never** be sent to the browser (only admin
+sees it).
 
 **Pricing model (target — `docs/backend/11`):** a server-side **landed-cost engine** replaces the flat
 margin when the `dynamic_pricing` flag is ON — Temu USD base × live USD/EGP rate + ~$2 bulk shipping +
 10.5% customs (Gamarek) + 14% VAT + ~100 EGP handling → **50% margin on landed cost**, rounded to 5 EGP.
-`getSellPrice` becomes `computeSellPrice(product, settings)` (single price authority). All rates are
-settings-driven and **must be verified** against current regulations; all cost inputs stay server-only.
+`computeSellPrice` remains the single price authority. All rates are settings-driven and **must be
+verified** against current regulations; all cost inputs stay server-only.
 
-**Governorate → zone mapping:** `src/shared/data/governorates.data.ts` (all 27 governorates → zone).
-Shipping cost = `getShippingCost(governorateId, subtotal)` in `features/checkout/utils/shipping.ts`.
+**Governorate → zone mapping:** D1 `governorates` (admin-editable in P11). Shipping =
+server `getShippingCost` (zone fees + free threshold from DB). Checkout/cart **preview** uses
+`GET /api/storefront-config` (not static `SHIPPING_RATES`).
 
-**Promo codes:** `src/shared/data/promos.data.ts` + `validatePromoCode(code, subtotal)` (percentage or
-fixed, optional `minOrderValue`). Applied in `cart.store.applyCoupon`.
+**Promo codes:** D1 `promos` via `POST /api/promos/validate` (admin CRUD in P11). Applied in cart.
 
 ## Stack
 
@@ -91,7 +92,7 @@ fixed, optional `minOrderValue`). Applied in `cart.store.applyCoupon`.
 | Auth | `features/auth/` | login/register/forgot, `AuthGuard`, httpOnly session via `/api/auth/*` |
 | Favorites/wishlist | `shared/store/favorites.store.ts` | shared across shop cards, product, account |
 | Bridal custom | `features/bridal-custom/` | multipart → `/api/bridal-requests` + R2; replies ≤ 2 days |
-| Admin | `features/admin/` | shell + products/categories (P9) + **orders/users (P10)**; settings P11–P12 |
+| Admin | `features/admin/` | full CRUD modules (P8–P11) + **dashboard stats / audit writes (P12)** |
 
 **Persisted Zustand keys:** `Zaya-cart`, `Zaya-favorites` (guest wishlist; synced to
 `/api/account/favorites` on login), `Zaya-recently-viewed`. Auth/profile/addresses/orders/wallet/
@@ -106,7 +107,9 @@ Account (protected by `AuthGuard`): `/account` · `/account/profile` · `/accoun
 `/account/favorites` · `/account/orders` · `/account/wallet` · `/account/vouchers`
 Admin (`AdminGuard` + `requireAdmin`): `/admin` · `/admin/login` · `/admin/forbidden` ·
 `/admin/products` · `/admin/products/new` · `/admin/products/[id]/edit` · `/admin/categories` ·
-`/admin/categories/new` · `/admin/categories/[slug]/edit` — more CRUD in P10–P12 (`08`).
+`/admin/categories/new` · `/admin/categories/[slug]/edit` · `/admin/orders` · `/admin/orders/[id]` ·
+`/admin/users` · `/admin/users/[id]` · `/admin/locations` · `/admin/promos` · `/admin/bridal` ·
+`/admin/bridal/[id]` · `/admin/settings` — `/admin` dashboard stats live (P12).
 Legal/marketing: `/about` · `/contact` · `/privacy` · `/terms` · `/cookies`
 
 Categories: jewelry, bags, hair, scarves, sunglasses, watches, **bride**.

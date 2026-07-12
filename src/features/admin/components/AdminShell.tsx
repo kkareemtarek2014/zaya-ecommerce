@@ -26,12 +26,12 @@ const NAV = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/categories', label: 'Categories', icon: FolderTree },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, soon: true },
-  { href: '/admin/users', label: 'Users', icon: Users, soon: true },
-  { href: '/admin/locations', label: 'Locations', icon: MapPin, soon: true },
-  { href: '/admin/promos', label: 'Promos', icon: Ticket, soon: true },
-  { href: '/admin/bridal', label: 'Bridal', icon: Heart, soon: true },
-  { href: '/admin/settings', label: 'Settings', icon: Settings, soon: true },
+  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/locations', label: 'Locations', icon: MapPin },
+  { href: '/admin/promos', label: 'Promos', icon: Ticket },
+  { href: '/admin/bridal', label: 'Bridal', icon: Heart },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ] as const;
 
 function navActive(pathname: string, href: string, exact?: boolean): boolean {
@@ -85,11 +85,10 @@ export function AdminSidebar({
           {NAV.map((item) => {
             const Icon = item.icon;
             const active = navActive(pathname, item.href, 'exact' in item && item.exact);
-            const soon = 'soon' in item && item.soon;
             return (
               <Link
                 key={item.href}
-                href={soon ? '/admin' : item.href}
+                href={item.href}
                 onClick={onClose}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
@@ -97,17 +96,10 @@ export function AdminSidebar({
                   active
                     ? 'bg-brand-blush text-brand-primary font-medium'
                     : 'text-text-secondary hover:bg-brand-blush/50 hover:text-text-primary',
-                  soon && 'opacity-60',
                 )}
-                title={soon ? 'Coming in a later phase' : undefined}
               >
                 <Icon className="size-4 shrink-0" />
                 <span className="flex-1">{item.label}</span>
-                {soon ? (
-                  <span className="text-[10px] uppercase tracking-wide text-text-muted">
-                    Soon
-                  </span>
-                ) : null}
               </Link>
             );
           })}

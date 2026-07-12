@@ -1,12 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Banknote } from 'lucide-react';
 import { formatEGP } from '@/shared/utils/price';
-import { GOVERNORATES } from '@/shared/data/governorates.data';
+import {
+  getGovernorate,
+  GOVERNORATES,
+} from '@/shared/data/governorates.data';
+import { useStorefrontConfig } from '@/features/admin';
 import { Button, Input, Select } from '@/shared/components/ui';
 import { useHydrated } from '@/shared/hooks/useHydrated';
 import { AppError } from '@/shared/contracts/errors';
@@ -17,7 +21,10 @@ import {
 } from '@/features/cart';
 import { usePlaceOrder } from '@/features/order/hooks/useOrders';
 import { checkoutSchema, type CheckoutFormValues } from '../schema/checkout.schema';
-import { getShippingCost } from '../utils/shipping';
+import {
+  buildShippingPreviewConfig,
+  getShippingCost,
+} from '../utils/shipping';
 
 export function CheckoutForm() {
   const mounted = useHydrated();
@@ -27,7 +34,13 @@ export function CheckoutForm() {
   const couponCode = useCartStore((s) => s.couponCode);
   const note = useCartStore((s) => s.note);
   const placeOrder = usePlaceOrder();
+  const { data: storefrontConfig } = useStorefrontConfig();
   const [formError, setFormError] = useState<string | null>(null);
+
+  const previewConfig = useMemo(
+    () => buildShippingPreviewConfig(storefrontConfig),
+    [storefrontConfig],
+  );
 
   const {
     register,
@@ -40,8 +53,11 @@ export function CheckoutForm() {
   });
 
   const governorate = watch('governorate');
+  const zone = governorate ? getGovernorate(governorate)?.zone : undefined;
   // Preview only — free shipping keyed off pre-discount subtotal (server matches).
-  const shipping = governorate ? getShippingCost(governorate, subtotal) : null;
+  const shipping = governorate
+    ? getShippingCost(zone, subtotal, previewConfig)
+    : null;
   const total =
     shipping === null
       ? Math.max(0, subtotal - discount)
