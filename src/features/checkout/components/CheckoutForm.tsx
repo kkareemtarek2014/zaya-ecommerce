@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,32 +9,43 @@ import { formatEGP } from '@/shared/utils/price';
 import { GOVERNORATES } from '@/shared/data/governorates.data';
 import { Button, Input, Select } from '@/shared/components/ui';
 import { useHydrated } from '@/shared/hooks/useHydrated';
-import { selectCartSubtotal, useCartStore } from '@/features/cart';
-import { useOrdersStore } from '@/features/order';
+import { AppError } from '@/shared/contracts/errors';
+import {
+  selectCartDiscount,
+  selectCartSubtotal,
+  useCartStore,
+} from '@/features/cart';
+import { usePlaceOrder } from '@/features/order/hooks/useOrders';
 import { checkoutSchema, type CheckoutFormValues } from '../schema/checkout.schema';
 import { getShippingCost } from '../utils/shipping';
 
 export function CheckoutForm() {
-  const router = useRouter();
   const mounted = useHydrated();
   const items = useCartStore((s) => s.items);
   const subtotal = useCartStore(selectCartSubtotal);
-  const clearCart = useCartStore((s) => s.clear);
-  const placeOrder = useOrdersStore((s) => s.placeOrder);
+  const discount = useCartStore(selectCartDiscount);
+  const couponCode = useCartStore((s) => s.couponCode);
+  const note = useCartStore((s) => s.note);
+  const placeOrder = usePlaceOrder();
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: { paymentMethod: 'cod', governorate: '' },
   });
 
   const governorate = watch('governorate');
+  // Preview only — free shipping keyed off pre-discount subtotal (server matches).
   const shipping = governorate ? getShippingCost(governorate, subtotal) : null;
-  const total = subtotal + (shipping ?? 0);
+  const total =
+    shipping === null
+      ? Math.max(0, subtotal - discount)
+      : Math.max(0, subtotal - discount) + shipping;
 
   if (!mounted) return null;
 
@@ -54,31 +65,35 @@ export function CheckoutForm() {
     );
   }
 
-  const onSubmit = (values: CheckoutFormValues) => {
-    const order = placeOrder({
-      items: items.map((i) => ({
-        productId: i.productId,
-        name: i.name,
-        image: i.image,
-        unitPrice: i.unitPrice,
-        quantity: i.quantity,
-      })),
-      address: {
-        fullName: values.fullName,
-        phone: values.phone,
-        governorate: values.governorate,
-        city: values.city,
-        street: values.street,
-        notes: values.notes,
-      },
-      paymentMethod: values.paymentMethod,
-      subtotal,
-      shipping: getShippingCost(values.governorate, subtotal),
-      total: subtotal + getShippingCost(values.governorate, subtotal),
-      note: useCartStore.getState().note,
-    });
-    clearCart();
-    router.push(`/order/${order.id}`);
+  const onSubmit = async (values: CheckoutFormValues) => {
+    setFormError(null);
+    try {
+      await placeOrder.mutateAsync({
+        items: items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+        })),
+        address: {
+          fullName: values.fullName,
+          phone: values.phone,
+          governorate: values.governorate,
+          city: values.city,
+          street: values.street,
+          ...(values.notes ? { notes: values.notes } : {}),
+        },
+        paymentMethod: 'cod',
+        ...(couponCode ? { promoCode: couponCode } : {}),
+        ...(note ? { note } : {}),
+      });
+    } catch (err) {
+      setFormError(
+        err instanceof AppError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Could not place order',
+      );
+    }
   };
 
   return (
@@ -87,12 +102,14 @@ export function CheckoutForm() {
       className="grid gap-10 lg:grid-cols-[1fr_380px]"
       noValidate
     >
-      {/* ── Delivery details ────────────────────────────── */}
       <div className="space-y-8">
         <section className="space-y-4">
           <h2 className="font-display text-xl font-semibold">
             Delivery Details
           </h2>
+          {formError && (
+            <p className="text-sm text-status-error">{formError}</p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label="Full name"
@@ -147,9 +164,7 @@ export function CheckoutForm() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="font-display text-xl font-semibold">
-            Payment
-          </h2>
+          <h2 className="font-display text-xl font-semibold">Payment</h2>
           <label className="flex cursor-pointer items-center gap-4 rounded-lg border border-brand-primary bg-brand-blush/50 p-4">
             <input
               type="radio"
@@ -169,11 +184,8 @@ export function CheckoutForm() {
         </section>
       </div>
 
-      {/* ── Order summary ───────────────────────────────── */}
       <aside className="h-fit rounded-lg border border-border bg-surface-raised p-6">
-        <h2 className="font-display text-xl font-semibold">
-          Your Order
-        </h2>
+        <h2 className="font-display text-xl font-semibold">Your Order</h2>
 
         <ul className="mt-4 space-y-3 border-b border-border pb-4 text-sm">
           {items.map((item) => (
@@ -193,6 +205,12 @@ export function CheckoutForm() {
             <dt className="text-text-secondary">Subtotal</dt>
             <dd className="font-medium">{formatEGP(subtotal)}</dd>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-status-success">
+              <dt>Discount{couponCode ? ` (${couponCode})` : ''}</dt>
+              <dd className="font-medium">-{formatEGP(discount)}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-text-secondary">Shipping</dt>
             <dd className="font-medium">
@@ -216,9 +234,9 @@ export function CheckoutForm() {
           fullWidth
           size="lg"
           className="mt-5"
-          disabled={isSubmitting}
+          isLoading={placeOrder.isPending}
         >
-          {isSubmitting ? 'Placing order…' : 'Place order'}
+          {placeOrder.isPending ? 'Placing order…' : 'Place order'}
         </Button>
         <p className="mt-3 text-center text-xs text-text-muted">
           By placing your order you agree to our delivery terms.

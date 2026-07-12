@@ -5,17 +5,19 @@ import Link from 'next/link';
 import { CircleCheck } from 'lucide-react';
 import { formatEGP } from '@/shared/utils/price';
 import { getGovernorate } from '@/shared/data/governorates.data';
-import { Button } from '@/shared/components/ui';
+import { Button, Loader } from '@/shared/components/ui';
 import { useHydrated } from '@/shared/hooks/useHydrated';
-import { useOrdersStore } from '../store/orders.store';
+import { useOrder } from '../hooks/useOrders';
 
 export function OrderConfirmation({ orderId }: { orderId: string }) {
   const mounted = useHydrated();
-  const order = useOrdersStore((s) => s.getOrder(orderId));
+  const { data: order, isLoading, isError } = useOrder(orderId);
 
-  if (!mounted) return null;
+  if (!mounted || isLoading) {
+    return <Loader fullscreen={false} className="p-12" />;
+  }
 
-  if (!order) {
+  if (isError || !order) {
     return (
       <div className="py-24 text-center">
         <p className="text-lg text-text-secondary">
@@ -49,9 +51,7 @@ export function OrderConfirmation({ orderId }: { orderId: string }) {
       </div>
 
       <div className="mt-8 rounded-lg border border-border bg-surface-raised p-6">
-        <h2 className="font-display text-lg font-semibold">
-          Order Summary
-        </h2>
+        <h2 className="font-display text-lg font-semibold">Order Summary</h2>
 
         <ul className="mt-4 space-y-4 border-b border-border pb-5">
           {order.items.map((item) => (
@@ -81,11 +81,22 @@ export function OrderConfirmation({ orderId }: { orderId: string }) {
             <dt className="text-text-secondary">Subtotal</dt>
             <dd>{formatEGP(order.subtotal)}</dd>
           </div>
+          {order.discount > 0 && (
+            <div className="flex justify-between text-status-success">
+              <dt>
+                Discount
+                {order.promoCode ? ` (${order.promoCode})` : ''}
+              </dt>
+              <dd>-{formatEGP(order.discount)}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-text-secondary">
               Shipping · {governorate?.name ?? order.address.governorate}
             </dt>
-            <dd>{order.shipping === 0 ? 'Free' : formatEGP(order.shipping)}</dd>
+            <dd>
+              {order.shipping === 0 ? 'Free' : formatEGP(order.shipping)}
+            </dd>
           </div>
           <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
             <dt>Total (cash on delivery)</dt>

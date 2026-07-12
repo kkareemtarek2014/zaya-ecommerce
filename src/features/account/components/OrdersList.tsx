@@ -3,15 +3,25 @@
 import Link from 'next/link';
 import { Package } from 'lucide-react';
 import { formatEGP } from '@/shared/utils/price';
-import { Badge, Button } from '@/shared/components/ui';
+import { Badge, Button, Loader } from '@/shared/components/ui';
 import { useHydrated } from '@/shared/hooks/useHydrated';
-import { useOrdersStore } from '@/features/order';
+import { useMyOrders } from '@/features/order/hooks/useOrders';
 
 export function OrdersList() {
   const mounted = useHydrated();
-  const orders = useOrdersStore((s) => s.orders);
+  const { data: orders = [], isLoading, isError } = useMyOrders();
 
-  if (!mounted) return null;
+  if (!mounted || isLoading) {
+    return <Loader fullscreen={false} className="p-12" />;
+  }
+
+  if (isError) {
+    return (
+      <p className="py-8 text-center text-sm text-status-error">
+        Could not load your orders. Please try again.
+      </p>
+    );
+  }
 
   if (orders.length === 0) {
     return (

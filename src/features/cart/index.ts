@@ -2,6 +2,8 @@ export {
   useCartStore,
   selectCartCount,
   selectCartSubtotal,
+  selectCartDiscount,
+  selectCartTotal,
   type CartItem,
 } from './store/cart.store';
 export { CartView } from './components/CartView';

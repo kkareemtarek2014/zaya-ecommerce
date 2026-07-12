@@ -4,13 +4,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 /**
- * Wishlist / favorites store.
- * Shared because it is consumed by 2+ features (shop cards, product detail,
- * and the account favorites page). Front-end only for now (persisted to
- * localStorage). When a backend exists, sync `ids` through a service.
+ * Wishlist / favorites store (guest + optimistic UI).
+ * Guests persist to `Zaya-favorites`. On login, ids are PUT to
+ * `/api/account/favorites`; while authenticated, toggles PUT the set too.
  */
 interface FavoritesState {
   ids: string[];
+  setIds: (ids: string[]) => void;
   toggle: (productId: string) => void;
   add: (productId: string) => void;
   remove: (productId: string) => void;
@@ -22,6 +22,7 @@ export const useFavoritesStore = create<FavoritesState>()(
   persist(
     (set, get) => ({
       ids: [],
+      setIds: (ids) => set({ ids: [...new Set(ids)] }),
       toggle: (productId) =>
         set((state) => ({
           ids: state.ids.includes(productId)

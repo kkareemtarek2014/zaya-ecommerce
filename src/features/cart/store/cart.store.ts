@@ -3,7 +3,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Product } from '@/shared/types/product.types';
-import { validatePromoCode } from '@/shared/data/promos.data';
+import { api } from '@/shared/lib/api-client';
+import type { ValidatePromoResult } from '@/shared/contracts/promo.contract';
 
 export interface CartItem {
   productId: string;
@@ -17,13 +18,17 @@ interface CartState {
   items: CartItem[];
   isOpen: boolean;
   couponCode: string | null;
+  /** Discount from last successful API validate (integer EGP). */
+  couponDiscount: number;
   note: string;
   openDrawer: () => void;
   closeDrawer: () => void;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   setQuantity: (productId: string, quantity: number) => void;
-  applyCoupon: (code: string) => { success: boolean; error?: string };
+  applyCoupon: (
+    code: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   removeCoupon: () => void;
   setNote: (note: string) => void;
   clear: () => void;
@@ -35,6 +40,7 @@ export const useCartStore = create<CartState>()(
       items: [],
       isOpen: false,
       couponCode: null,
+      couponDiscount: 0,
       note: '',
 
       openDrawer: () => set({ isOpen: true }),
@@ -82,25 +88,44 @@ export const useCartStore = create<CartState>()(
           ),
         })),
 
-      applyCoupon: (code) => {
+      applyCoupon: async (code) => {
         const subtotal = selectCartSubtotal(get());
-        const result = validatePromoCode(code, subtotal);
-        if (result.valid) {
-          set({ couponCode: code.toUpperCase() });
-          return { success: true };
+        try {
+          const result = await api.post<ValidatePromoResult>(
+            '/api/promos/validate',
+            { code, subtotal },
+          );
+          if (result.valid) {
+            set({
+              couponCode: code.toUpperCase(),
+              couponDiscount: result.discount ?? 0,
+            });
+            return { success: true };
+          }
+          return { success: false, error: result.error ?? 'Invalid promo code' };
+        } catch (err) {
+          return {
+            success: false,
+            error: err instanceof Error ? err.message : 'Invalid promo code',
+          };
         }
-        return { success: false, error: result.error };
       },
 
-      removeCoupon: () => set({ couponCode: null }),
+      removeCoupon: () => set({ couponCode: null, couponDiscount: 0 }),
 
       setNote: (note: string) => set({ note }),
 
-      clear: () => set({ items: [], couponCode: null, note: '' }),
+      clear: () =>
+        set({ items: [], couponCode: null, couponDiscount: 0, note: '' }),
     }),
     {
       name: 'Zaya-cart',
-      partialize: (state) => ({ items: state.items, couponCode: state.couponCode, note: state.note }),
+      partialize: (state) => ({
+        items: state.items,
+        couponCode: state.couponCode,
+        couponDiscount: state.couponDiscount,
+        note: state.note,
+      }),
     },
   ),
 );
@@ -113,9 +138,7 @@ export const selectCartSubtotal = (state: CartState): number =>
 
 export const selectCartDiscount = (state: CartState): number => {
   if (!state.couponCode) return 0;
-  const subtotal = selectCartSubtotal(state);
-  const result = validatePromoCode(state.couponCode, subtotal);
-  return result.valid ? (result.discount ?? 0) : 0;
+  return state.couponDiscount;
 };
 
 export const selectCartTotal = (state: CartState): number => {
@@ -123,4 +146,3 @@ export const selectCartTotal = (state: CartState): number => {
   const discount = selectCartDiscount(state);
   return Math.max(0, subtotal - discount);
 };
-

@@ -86,13 +86,14 @@ fixed, optional `minOrderValue`). Applied in `cart.store.applyCoupon`.
 | Cart | `features/cart/` | `cart.store.ts` (persist `Zaya-cart`): items, coupon, note; recommendations |
 | Checkout | `features/checkout/` | Zod schema (Egyptian phone), shipping calc, COD; places order |
 | Orders | `features/order/` | client order log (`Zaya-orders`), confirmation, status timeline |
-| Account | `features/account/` | profile, addresses, favorites, wallet (flag OFF), orders, vouchers |
+| Account | `features/account/` | profile/addresses/favorites/wallet via `/api/account/*`; wallet flag OFF; vouchers UI only |
 | Auth | `features/auth/` | login/register/forgot, `AuthGuard`, mock users store (plaintext seed) |
 | Favorites/wishlist | `shared/store/favorites.store.ts` | shared across shop cards, product, account |
 | Bridal custom | `features/bridal-custom/` | photo/video request form; replies ≤ 2 days; file NOT uploaded yet (needs backend) |
 
-**Persisted Zustand keys:** `Zaya-cart`, `Zaya-orders`, `Zaya-bridal-requests`, `Zaya-auth`,
-`Zaya-users`, `Zaya-addresses`, `Zaya-profile`, `Zaya-wallet`, `Zaya-favorites`, `Zaya-recently-viewed`.
+**Persisted Zustand keys:** `Zaya-cart`, `Zaya-bridal-requests`, `Zaya-favorites` (guest wishlist;
+synced to `/api/account/favorites` on login), `Zaya-recently-viewed`. Auth/profile/addresses/orders/
+wallet are server-backed (httpOnly session + `/api/*`); no longer client-persisted.
 
 ## Pages
 
@@ -155,7 +156,7 @@ Full, phased specs live in **`docs/backend/`** — read the index first (`README
 - Product images are gradient SVGs in `public/images/` — replace with real photos (keep same paths or
   update data files; admin image upload → R2 is specified in `docs/backend/08`).
 - `SITE.url` is a placeholder domain.
-- Reviews are hardcoded in `ProductReviews.tsx`; wallet is seeded + flag OFF (both become tables — see `02`).
+- Reviews are still hardcoded in `ProductReviews.tsx` (Phase 6). Wallet API exists but flag OFF → page + API 404.
 - Bridal request uploads store file metadata only — real upload needs backend (multipart POST → R2).
 - Auth is a plaintext mock — becomes hashed users + httpOnly session (see `03`).
 - `API.md` doesn't exist yet — create it when defining the backend contract (`07` Phase 7).

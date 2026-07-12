@@ -6,9 +6,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MapPin, Plus, Trash2 } from 'lucide-react';
 import { Button, Input, Select } from '@/shared/components/ui';
-import { useHydrated } from '@/shared/hooks/useHydrated';
+import { AppError } from '@/shared/contracts/errors';
 import { GOVERNORATES, getGovernorate } from '@/shared/data/governorates.data';
-import { useAddressesStore } from '../store/addresses.store';
+import {
+  useAddresses,
+  useAddAddress,
+  useRemoveAddress,
+} from '../hooks/useAccount';
 
 const addressSchema = z.object({
   label: z.string().trim().min(2, 'e.g. Home, Work'),
@@ -25,11 +29,11 @@ const addressSchema = z.object({
 type AddressFormValues = z.infer<typeof addressSchema>;
 
 export function AddressBook() {
-  const mounted = useHydrated();
-  const addresses = useAddressesStore((s) => s.addresses);
-  const addAddress = useAddressesStore((s) => s.addAddress);
-  const removeAddress = useAddressesStore((s) => s.removeAddress);
+  const { data: addresses = [], isLoading } = useAddresses();
+  const addMutation = useAddAddress();
+  const removeMutation = useRemoveAddress();
   const [showForm, setShowForm] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
@@ -41,13 +45,26 @@ export function AddressBook() {
     defaultValues: { governorate: '' },
   });
 
-  if (!mounted) return null;
-
-  const onSubmit = (values: AddressFormValues) => {
-    addAddress(values);
-    reset({ label: '', governorate: '', city: '', street: '' });
-    setShowForm(false);
+  const onSubmit = async (values: AddressFormValues) => {
+    setFormError(null);
+    try {
+      await addMutation.mutateAsync(values);
+      reset({ label: '', governorate: '', city: '', street: '' });
+      setShowForm(false);
+    } catch (err) {
+      setFormError(
+        err instanceof AppError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Could not save address',
+      );
+    }
   };
+
+  if (isLoading) {
+    return <p className="text-sm text-text-secondary">Loading addresses…</p>;
+  }
 
   return (
     <div className="space-y-6">
@@ -78,8 +95,9 @@ export function AddressBook() {
               <button
                 type="button"
                 aria-label={`Delete address ${address.label}`}
-                onClick={() => removeAddress(address.id)}
-                className="text-text-muted transition-colors hover:text-status-error"
+                disabled={removeMutation.isPending}
+                onClick={() => removeMutation.mutate(address.id)}
+                className="text-text-muted transition-colors hover:text-status-error disabled:opacity-50"
               >
                 <Trash2 className="size-4" />
               </button>
@@ -94,6 +112,9 @@ export function AddressBook() {
           className="max-w-md space-y-4 rounded-(--radius-lg) border border-border bg-surface-raised p-5"
           noValidate
         >
+          {formError && (
+            <p className="text-sm text-status-error">{formError}</p>
+          )}
           <Input
             label="Label"
             placeholder="Home"
@@ -127,7 +148,9 @@ export function AddressBook() {
             {...register('street')}
           />
           <div className="flex gap-2">
-            <Button type="submit">Save address</Button>
+            <Button type="submit" isLoading={addMutation.isPending}>
+              Save address
+            </Button>
             <Button
               type="button"
               variant="ghost"

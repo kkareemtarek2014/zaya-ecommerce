@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppError } from '@/shared/contracts/errors';
 import type { UserDTO } from '@/shared/contracts/auth.contract';
+import { accountService } from '@/features/account/services/account.service';
+import { useFavoritesStore } from '@/shared/store/favorites.store';
 import type {
   ForgotPasswordValues,
   LoginValues,
@@ -13,6 +15,17 @@ import { authService } from '../services/auth.service';
 import { useAuthStore } from '../store/auth.store';
 
 export const SESSION_QUERY_KEY = ['auth', 'session'] as const;
+
+/** Push guest localStorage favorites to the server before marking the session live. */
+async function pushGuestFavorites(): Promise<void> {
+  const ids = useFavoritesStore.getState().ids;
+  try {
+    const result = await accountService.putFavorites({ ids });
+    useFavoritesStore.getState().setIds(result.ids);
+  } catch {
+    /* keep local ids; FavoritesSync may pull later */
+  }
+}
 
 export function useSession() {
   const setSession = useAuthStore((s) => s.setSession);
@@ -48,7 +61,8 @@ export function useLogin() {
   return useMutation({
     mutationFn: (values: LoginValues) =>
       authService.login(values.email, values.password),
-    onSuccess: (user) => {
+    onSuccess: async (user) => {
+      await pushGuestFavorites();
       login(user);
       qc.setQueryData(SESSION_QUERY_KEY, user);
     },
@@ -61,7 +75,8 @@ export function useRegister() {
   return useMutation({
     mutationFn: (values: RegisterValues) =>
       authService.register(values.email, values.name, values.password),
-    onSuccess: (user) => {
+    onSuccess: async (user) => {
+      await pushGuestFavorites();
       login(user);
       qc.setQueryData(SESSION_QUERY_KEY, user);
     },
@@ -83,6 +98,8 @@ export function useLogout() {
     onSuccess: () => {
       logout();
       qc.setQueryData(SESSION_QUERY_KEY, null);
+      void qc.removeQueries({ queryKey: ['account'] });
+      void qc.removeQueries({ queryKey: ['orders'] });
     },
   });
 }

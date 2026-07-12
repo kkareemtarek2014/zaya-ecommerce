@@ -5,16 +5,19 @@ import Link from 'next/link';
 import { formatEGP } from '@/shared/utils/price';
 import { getGovernorate } from '@/shared/data/governorates.data';
 import { useHydrated } from '@/shared/hooks/useHydrated';
-import { useOrdersStore } from '../store/orders.store';
+import { Loader } from '@/shared/components/ui';
+import { useOrder } from '../hooks/useOrders';
 import { OrderStatusTimeline } from './OrderStatusTimeline';
 
 export function OrderDetails({ orderId }: { orderId: string }) {
   const mounted = useHydrated();
-  const order = useOrdersStore((s) => s.getOrder(orderId));
+  const { data: order, isLoading, isError } = useOrder(orderId);
 
-  if (!mounted) return null;
+  if (!mounted || isLoading) {
+    return <Loader fullscreen={false} className="p-12" />;
+  }
 
-  if (!order) {
+  if (isError || !order) {
     return (
       <div className="py-24 text-center">
         <p className="text-lg text-text-secondary">
@@ -81,11 +84,20 @@ export function OrderDetails({ orderId }: { orderId: string }) {
               <dt className="text-text-secondary">Subtotal</dt>
               <dd>{formatEGP(order.subtotal)}</dd>
             </div>
+            {order.discount > 0 && (
+              <div className="flex justify-between text-status-success">
+                <dt>
+                  Discount
+                  {order.promoCode ? ` (${order.promoCode})` : ''}
+                </dt>
+                <dd>-{formatEGP(order.discount)}</dd>
+              </div>
+            )}
             <div className="flex justify-between">
-              <dt className="text-text-secondary">
-                Shipping
-              </dt>
-              <dd>{order.shipping === 0 ? 'Free' : formatEGP(order.shipping)}</dd>
+              <dt className="text-text-secondary">Shipping</dt>
+              <dd>
+                {order.shipping === 0 ? 'Free' : formatEGP(order.shipping)}
+              </dd>
             </div>
             <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
               <dt>Total (cash on delivery)</dt>
@@ -100,7 +112,9 @@ export function OrderDetails({ orderId }: { orderId: string }) {
               Shipping Information
             </h2>
             <div className="mt-4 space-y-2 text-sm text-text-secondary">
-              <p className="font-medium text-text-primary">{order.address.fullName}</p>
+              <p className="font-medium text-text-primary">
+                {order.address.fullName}
+              </p>
               <p>{order.address.phone}</p>
               <p>
                 {order.address.street}, {order.address.city}
@@ -108,7 +122,7 @@ export function OrderDetails({ orderId }: { orderId: string }) {
               <p>{governorate?.name ?? order.address.governorate}</p>
             </div>
           </div>
-          
+
           {(order.address.notes || order.note) && (
             <div className="rounded-lg border border-border bg-surface-raised p-6">
               <h2 className="font-display text-lg font-semibold">

@@ -6,25 +6,24 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Check } from 'lucide-react';
 import { Button, Input } from '@/shared/components/ui';
-import { useHydrated } from '@/shared/hooks/useHydrated';
-import { useProfileStore } from '../store/profile.store';
+import { AppError } from '@/shared/contracts/errors';
+import { useProfile, useUpdateProfile } from '../hooks/useAccount';
 
 const profileSchema = z.object({
-  fullName: z.string().trim().min(3, 'Please enter your full name'),
+  fullName: z.string().trim().min(2, 'Please enter your full name'),
   phone: z
     .string()
     .trim()
     .regex(/^01[0125][0-9]{8}$/, 'Enter a valid Egyptian mobile'),
-  email: z.email('Enter a valid email').or(z.literal('')),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function ProfileForm() {
-  const mounted = useHydrated();
-  const profile = useProfileStore((s) => s.profile);
-  const updateProfile = useProfileStore((s) => s.updateProfile);
+  const { data: profile, isLoading } = useProfile();
+  const updateMutation = useUpdateProfile();
   const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
@@ -32,15 +31,37 @@ export function ProfileForm() {
     formState: { errors },
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    values: profile,
+    values: {
+      fullName: profile?.fullName ?? '',
+      phone: profile?.phone ?? '',
+    },
   });
 
-  if (!mounted) return null;
+  if (isLoading || !profile) {
+    return (
+      <p className="text-sm text-text-secondary">Loading profile…</p>
+    );
+  }
 
-  const onSubmit = (values: ProfileFormValues) => {
-    updateProfile(values);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const onSubmit = async (values: ProfileFormValues) => {
+    setFormError(null);
+    setSaved(false);
+    try {
+      await updateMutation.mutateAsync({
+        fullName: values.fullName,
+        phone: values.phone,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setFormError(
+        err instanceof AppError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Could not save profile',
+      );
+    }
   };
 
   return (
@@ -49,6 +70,7 @@ export function ProfileForm() {
       className="max-w-md space-y-4"
       noValidate
     >
+      {formError && <p className="text-sm text-status-error">{formError}</p>}
       <Input
         label="Full name"
         placeholder="Mariam Ahmed"
@@ -65,14 +87,17 @@ export function ProfileForm() {
         {...register('phone')}
       />
       <Input
-        label="Email (optional)"
+        label="Email"
         type="email"
-        placeholder="you@example.com"
+        value={profile.email}
+        disabled
+        readOnly
         autoComplete="email"
-        error={errors.email?.message}
-        {...register('email')}
       />
-      <Button type="submit">
+      <p className="text-xs text-text-muted -mt-2">
+        Email cannot be changed here.
+      </p>
+      <Button type="submit" isLoading={updateMutation.isPending}>
         {saved ? (
           <>
             <Check className="size-4" /> Saved

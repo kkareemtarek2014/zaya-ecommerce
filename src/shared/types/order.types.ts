@@ -1,40 +1,11 @@
-export interface OrderItem {
-  productId: string;
-  name: string;
-  image: string;
-  unitPrice: number;
-  quantity: number;
-}
+import type { OrderDTO } from '@/shared/contracts/order.contract';
+import { orderStatusSchema } from '@/shared/contracts/order.contract';
+import type { z } from 'zod';
 
-export interface ShippingAddress {
-  fullName: string;
-  phone: string;
-  governorate: string; // Governorate id
-  city: string;
-  street: string;
-  notes?: string;
-}
+/** Public order shape — matches API OrderDTO. */
+export type Order = OrderDTO;
 
-export type PaymentMethod = 'cod';
-
-export type OrderStatus =
-  | 'placed'
-  | 'confirmed'
-  | 'sourced'
-  | 'shipped'
-  | 'out_for_delivery'
-  | 'delivered'
-  | 'cancelled';
-
-export interface Order {
-  id: string;
-  createdAt: string; // ISO date
-  status: OrderStatus;
-  items: OrderItem[];
-  address: ShippingAddress;
-  paymentMethod: PaymentMethod;
-  subtotal: number;
-  shipping: number;
-  total: number;
-  note?: string; // Adding for Task 5
-}
+export type OrderItem = OrderDTO['items'][number];
+export type ShippingAddress = OrderDTO['address'];
+export type PaymentMethod = OrderDTO['paymentMethod'];
+export type OrderStatus = z.infer<typeof orderStatusSchema>;

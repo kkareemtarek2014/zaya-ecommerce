@@ -159,9 +159,9 @@ export function CartDrawer() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => { 
+                        onClick={async () => { 
                           if (!couponInput) return;
-                          const res = applyCoupon(couponInput); 
+                          const res = await applyCoupon(couponInput); 
                           if (res.success) {
                             setCouponInput('');
                             setCouponError(null);

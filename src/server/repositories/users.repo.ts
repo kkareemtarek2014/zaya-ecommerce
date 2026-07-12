@@ -46,3 +46,20 @@ export async function createUser(
   if (!row) throw new Error('Failed to create user');
   return row;
 }
+
+export async function updateUserProfile(
+  db: Db,
+  userId: string,
+  input: { name: string; phone?: string | null },
+): Promise<UserRow> {
+  await db
+    .update(users)
+    .set({
+      name: input.name,
+      phone: input.phone ?? null,
+    })
+    .where(eq(users.id, userId));
+  const row = await findUserById(db, userId);
+  if (!row) throw new Error('User not found after update');
+  return row;
+}

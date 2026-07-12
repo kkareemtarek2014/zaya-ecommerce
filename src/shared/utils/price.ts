@@ -10,6 +10,9 @@ export function getSellPrice(basePrice: number): number {
 }
 
 /** Format a number as EGP, e.g. 1250 → "EGP 1,250". */
-export function formatEGP(amount: number): string {
+export function formatEGP(amount?: number | null): string {
+  if (amount == null || isNaN(amount)) {
+    return `${SITE.currency} 0`;
+  }
   return `${SITE.currency} ${amount.toLocaleString(SITE.locale)}`;
 }
