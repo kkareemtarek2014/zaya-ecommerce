@@ -5,8 +5,17 @@ import { SITE } from '@/config/site.config';
 import { CATEGORIES } from '@/shared/data/categories.data';
 import { FeaturedProducts } from '@/features/shop';
 import { RecentlyViewed } from '@/features/product/components/RecentlyViewed';
+import { listCategories } from '@/server/services/product.service';
+import type { Category } from '@/shared/types/product.types';
 
-export default function HomePage() {
+export default async function HomePage() {
+  let categories: Category[] = CATEGORIES;
+  try {
+    categories = await listCategories();
+  } catch {
+    // Build/preview without bindings — seed categories keep the home grid intact.
+  }
+
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────── */}
@@ -85,7 +94,7 @@ export default function HomePage() {
           href="/shop"
         />
         <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/shop/${cat.slug}`}

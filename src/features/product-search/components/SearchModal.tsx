@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Clock3, SearchX, Search as SearchIcon, X } from 'lucide-react';
-import { formatEGP, getSellPrice } from '@/shared/utils/price';
+import { formatEGP } from '@/shared/utils/price';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { useScrollLock } from '@/shared/hooks/useScrollLock';
 import { useFocusTrap } from '@/shared/hooks/useFocusTrap';
@@ -135,7 +135,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
                         </p>
                       </div>
                       <span className="shrink-0 text-sm font-semibold text-brand-primary">
-                        {formatEGP(getSellPrice(product.basePrice))}
+                        {formatEGP(product.price)}
                       </span>
                     </Link>
                   </li>

@@ -1,20 +1,27 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { SITE } from '@/config/site.config';
-import { getProductById } from '@/features/shop/services/products.service';
-import { getSellPrice } from '@/shared/utils/price';
 import { ProductDetails } from '@/features/product';
+import { getProductOrNull } from '@/server/services/product.service';
+import type { ProductDTO } from '@/shared/contracts/product.contract';
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
+async function loadProduct(id: string): Promise<ProductDTO | null> {
+  try {
+    return await getProductOrNull(id);
+  } catch {
+    return null;
+  }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const product = await getProductById(id);
+  const product = await loadProduct(id);
   if (!product) return { title: 'Product not found' };
 
-  const price = getSellPrice(product.basePrice);
   return {
     title: product.name,
     description: product.description,
@@ -27,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: product.images[0] ? [{ url: product.images[0] }] : undefined,
     },
     other: {
-      'product:price:amount': String(price),
+      'product:price:amount': String(product.price),
       'product:price:currency': SITE.currency,
     },
   };
@@ -35,10 +42,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { id } = await params;
-  const product = await getProductById(id);
+  const product = await loadProduct(id);
   if (!product) notFound();
 
-  const price = getSellPrice(product.basePrice);
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -53,7 +59,7 @@ export default async function ProductPage({ params }: Props) {
     offers: {
       '@type': 'Offer',
       priceCurrency: SITE.currency,
-      price,
+      price: product.price,
       availability: product.inStock
         ? 'https://schema.org/InStock'
         : 'https://schema.org/OutOfStock',

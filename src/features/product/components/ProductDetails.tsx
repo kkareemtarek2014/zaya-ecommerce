@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Check, ShieldCheck, Star, Truck } from 'lucide-react';
 import { useProduct } from '@/features/shop';
 import { useCartStore } from '@/features/cart';
-import { formatEGP, getSellPrice } from '@/shared/utils/price';
+import { formatEGP } from '@/shared/utils/price';
 import { FREE_SHIPPING_THRESHOLD } from '@/config/site.config';
 import {
   Badge,
@@ -60,7 +60,7 @@ export function ProductDetails({ id }: { id: string }) {
     );
   }
 
-  const price = getSellPrice(product.basePrice);
+  const price = product.price;
 
   const handleAdd = () => {
     addItem(product, quantity);

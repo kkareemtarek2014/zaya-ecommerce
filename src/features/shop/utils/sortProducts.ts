@@ -1,5 +1,4 @@
 import type { Product } from '@/shared/types/product.types';
-import { getSellPrice } from '@/shared/utils/price';
 
 export type SortKey =
   | 'featured'
@@ -21,24 +20,18 @@ export const DEFAULT_SORT: SortKey = 'featured';
 const isBestSeller = (p: Product) => (p.tags?.includes('best seller') ? 1 : 0);
 
 /**
- * Pure, side-effect-free product sorter. Sorts on the *selling* price
- * (getSellPrice) so ordering matches what the customer sees. Returns a new
- * array — never mutates the input.
+ * Pure product sorter. Sorts on the public sell `price` from ProductDTO.
+ * Returns a new array — never mutates the input.
  */
 export function sortProducts(products: Product[], sortBy: SortKey): Product[] {
   const list = [...products];
 
   switch (sortBy) {
     case 'price-asc':
-      return list.sort(
-        (a, b) => getSellPrice(a.basePrice) - getSellPrice(b.basePrice),
-      );
+      return list.sort((a, b) => a.price - b.price);
     case 'price-desc':
-      return list.sort(
-        (a, b) => getSellPrice(b.basePrice) - getSellPrice(a.basePrice),
-      );
+      return list.sort((a, b) => b.price - a.price);
     case 'newest':
-      // No createdAt field yet — later products in the data layer are newer.
       return list.sort((a, b) =>
         b.id.localeCompare(a.id, undefined, { numeric: true }),
       );

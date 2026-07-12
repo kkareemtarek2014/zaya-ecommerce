@@ -1,18 +1,19 @@
-export interface Category {
-  slug: string;
-  name: string;
-  image: string;
-  /** Unique SEO description used in <meta> for the category page. */
-  seoDescription: string;
-}
+import type { CategoryDTO, ProductDTO } from '@/shared/contracts/product.contract';
 
-export interface Product {
+export type Category = CategoryDTO;
+
+/** Public storefront product (sell price only — never basePrice). */
+export type Product = ProductDTO;
+
+/**
+ * Seed/source record with sourcing cost. Used only by `shared/data` + `db/seed`.
+ * Never send this shape to the browser.
+ */
+export interface ProductSeed {
   id: string;
   name: string;
-  category: string; // Category slug
-  /** Sourcing cost in EGP (what we pay, e.g. Temu price + inbound shipping). */
+  category: string;
   basePrice: number;
-  /** Optional "was" price for sale styling. Display price is derived from basePrice. */
   compareAtPrice?: number;
   description: string;
   images: string[];

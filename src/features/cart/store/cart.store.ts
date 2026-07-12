@@ -3,7 +3,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Product } from '@/shared/types/product.types';
-import { getSellPrice } from '@/shared/utils/price';
 import { validatePromoCode } from '@/shared/data/promos.data';
 
 export interface CartItem {
@@ -63,7 +62,7 @@ export const useCartStore = create<CartState>()(
                 productId: product.id,
                 name: product.name,
                 image: product.images[0] ?? '',
-                unitPrice: getSellPrice(product.basePrice),
+                unitPrice: product.price,
                 quantity,
               },
             ],

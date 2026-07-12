@@ -1,11 +1,10 @@
-import type { Product } from '@/shared/types/product.types';
+import type { ProductSeed } from '@/shared/types/product.types';
 
 /**
- * Dummy catalog — stands in for the Temu/supplier feed until the real
- * sourcing API is defined in API.md. `basePrice` is the sourcing cost in EGP;
- * the customer-facing price is derived via getSellPrice() (margin applied).
+ * Dummy catalog — seed source for D1 (`pnpm db:seed`).
+ * `basePrice` is the sourcing cost in EGP (server-only after migration).
  */
-export const PRODUCTS: Product[] = [
+export const PRODUCTS: ProductSeed[] = [
   {
     id: 'p-001',
     name: 'Aurora Gold-Plated Layered Necklace',

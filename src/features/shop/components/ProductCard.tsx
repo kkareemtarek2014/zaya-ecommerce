@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { Product } from '@/shared/types/product.types';
-import { formatEGP, getSellPrice } from '@/shared/utils/price';
+import { formatEGP } from '@/shared/utils/price';
 import { Badge, QuantityStepper, WishlistButton } from '@/shared/components/ui';
 import { useCartStore } from '@/features/cart';
 
@@ -16,7 +16,7 @@ export function ProductCard({ product }: { product: Product }) {
     s.items.find((i) => i.productId === product.id),
   );
 
-  const price = getSellPrice(product.basePrice);
+  const price = product.price;
   const isBestSeller = product.tags?.includes('best seller');
   const onSale = Boolean(
     product.compareAtPrice && product.compareAtPrice > price,

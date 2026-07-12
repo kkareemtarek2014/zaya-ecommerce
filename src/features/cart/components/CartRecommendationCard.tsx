@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import type { Product } from '@/shared/types/product.types';
-import { formatEGP, getSellPrice } from '@/shared/utils/price';
+import { formatEGP } from '@/shared/utils/price';
 import { useCartStore } from '../store/cart.store';
 
 interface CartRecommendationCardProps {
@@ -18,7 +18,7 @@ export function CartRecommendationCard({
   onNavigate,
 }: CartRecommendationCardProps) {
   const addItem = useCartStore((s) => s.addItem);
-  const price = getSellPrice(product.basePrice);
+  const price = product.price;
 
   return (
     <div className="flex w-36 shrink-0 snap-start flex-col">
