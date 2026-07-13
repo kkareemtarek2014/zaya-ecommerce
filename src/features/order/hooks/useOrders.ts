@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { api } from '@/shared/lib/api-client';
 import type { CreateOrderInput, OrderDTO } from '@/shared/contracts/order.contract';
+import type { PaymobIntentionResult } from '@/shared/contracts/payment.contract';
 import { useCartStore } from '@/features/cart';
 
 export const orderKeys = {
@@ -35,12 +36,25 @@ export function usePlaceOrder() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateOrderInput) =>
-      api.post<OrderDTO>('/api/orders', input),
-    onSuccess: (order) => {
+    mutationFn: async (input: CreateOrderInput) => {
+      const order = await api.post<OrderDTO>('/api/orders', input);
+      if (input.paymentMethod === 'card' || input.paymentMethod === 'wallet') {
+        const intention = await api.post<PaymobIntentionResult>(
+          '/api/payments/paymob/intention',
+          { orderId: order.id },
+        );
+        return { order, intention };
+      }
+      return { order, intention: null as PaymobIntentionResult | null };
+    },
+    onSuccess: ({ order, intention }) => {
       clear();
       qc.setQueryData(orderKeys.detail(order.id), order);
       void qc.invalidateQueries({ queryKey: orderKeys.mine });
+      if (intention?.checkoutUrl) {
+        window.location.assign(intention.checkoutUrl);
+        return;
+      }
       router.push(`/order/${order.id}`);
     },
   });

@@ -21,6 +21,12 @@ const baseSchema = z
       .positive()
       .optional()
       .or(z.literal('')),
+    maxRedemptions: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .or(z.literal('')),
     active: z.boolean(),
   })
   .superRefine((data, ctx) => {
@@ -40,6 +46,7 @@ export interface PromoFormSubmit {
   type: 'percentage' | 'fixed';
   value: number;
   minOrderValue: number | null;
+  maxRedemptions: number | null;
   active: boolean;
 }
 
@@ -74,6 +81,7 @@ export function PromoForm({
       type: initial?.type ?? 'percentage',
       value: initial?.value ?? 0.1,
       minOrderValue: initial?.minOrderValue ?? '',
+      maxRedemptions: initial?.maxRedemptions ?? '',
       active: initial?.active ?? true,
     },
   });
@@ -89,6 +97,10 @@ export function PromoForm({
           values.minOrderValue === '' || values.minOrderValue == null
             ? null
             : Number(values.minOrderValue);
+        const max =
+          values.maxRedemptions === '' || values.maxRedemptions == null
+            ? null
+            : Number(values.maxRedemptions);
         await onSubmit({
           ...(mode === 'create' && values.code
             ? { code: values.code.trim().toUpperCase() }
@@ -96,6 +108,7 @@ export function PromoForm({
           type: values.type,
           value: values.value,
           minOrderValue: min,
+          maxRedemptions: max,
           active: values.active,
         });
       })}
@@ -129,6 +142,26 @@ export function PromoForm({
         error={errors.minOrderValue?.message}
         {...register('minOrderValue')}
       />
+      <Input
+        label="Max redemptions (optional)"
+        type="number"
+        step="1"
+        placeholder="Unlimited"
+        error={errors.maxRedemptions?.message}
+        {...register('maxRedemptions')}
+      />
+      {initial && initial.timesUsed != null ? (
+        <p className="rounded-(--radius) border border-border bg-brand-blush/20 px-3 py-2 text-xs text-text-secondary">
+          Used {initial.timesUsed}
+          {initial.remaining != null ? ` · ${initial.remaining} remaining` : ''}
+          {initial.discountTotal != null
+            ? ` · ${initial.discountTotal} EGP discounted`
+            : ''}
+          {initial.revenueTotal != null
+            ? ` · ${initial.revenueTotal} EGP revenue`
+            : ''}
+        </p>
+      ) : null}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

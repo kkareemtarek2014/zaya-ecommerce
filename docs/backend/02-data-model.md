@@ -272,7 +272,8 @@ Balance = Σ(credit) − Σ(debit), computed in the wallet service (no stored ba
 | `created_at` / `updated_at` | integer(ts) | |
 
 > `governorates` gains `bosta_city_id` (+ optional zone/district) for location mapping (`09` §B.4).
-> Optional `webhook_events` table (id, provider, event_id UNIQUE, received_at) for strict idempotency.
+> Optional `webhook_events` table (id, provider, event_id UNIQUE per provider, order_id null, received_at)
+> for strict idempotency — **shipped in P15** (migration `0013`).
 
 ### 2.14 `shipping_zones` — *why:* admin-editable delivery fees (formerly `SHIPPING_RATES` constant)
 | Column | Type | Notes |
@@ -341,9 +342,10 @@ created_at`. Written when an order applies a promo. `promos` gains optional `max
 `product_id PK FK→products (cascade) · views (int, default 0) · updated_at`. Incremented on product-page
 view. (Conversion rate needs visit analytics — deferred.)
 
-### 2.23 `homepage_blocks` — *why:* homepage builder (`10` §17, **future/flagged**)
+### 2.23 `homepage_blocks` — *why:* homepage builder (`10` §17, flagged `homepage_builder`)
 `id PK · type (hero|featured|new_arrivals|collection|promo, CHECK) · position · config (JSON) · active
-(bool) · created_at`. Home renders active blocks in `position` order. Behind a feature flag.
+(bool) · created_at`. Home renders active blocks in `position` order when the flag is on; classic
+hardcoded home is the fallback.
 
 ### 2.24 `role_permissions` — *why:* dynamic RBAC (`10` §19, optional)
 `role · permission` (composite PK). Optional — ship the code-defined `ROLE_PERMISSIONS` map first; add

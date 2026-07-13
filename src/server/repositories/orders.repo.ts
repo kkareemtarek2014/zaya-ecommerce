@@ -11,6 +11,7 @@ export type AdminOrderListFilters = {
   governorate?: string;
   dateFromMs?: number;
   dateToMs?: number;
+  preorderOnly?: boolean;
   page?: number;
   pageSize?: number;
 };
@@ -79,6 +80,32 @@ export async function countOrdersByUserId(
   return rows[0]?.value ?? 0;
 }
 
+export async function getUserOrderStats(
+  db: Db,
+  userId: string,
+): Promise<{
+  ordersCount: number;
+  totalSpent: number;
+  lastOrderAt: Date | null;
+}> {
+  const [row] = await db
+    .select({
+      ordersCount: count(),
+      totalSpent: sql<number>`coalesce(sum(case when ${orders.status} != 'cancelled' then ${orders.total} else 0 end), 0)`,
+      lastOrderAt: sql<number | null>`max(${orders.createdAt})`,
+    })
+    .from(orders)
+    .where(eq(orders.userId, userId));
+
+  const lastRaw = row?.lastOrderAt;
+  return {
+    ordersCount: row?.ordersCount ?? 0,
+    totalSpent: Number(row?.totalSpent ?? 0),
+    lastOrderAt:
+      lastRaw != null ? new Date(typeof lastRaw === 'number' ? lastRaw : Number(lastRaw)) : null,
+  };
+}
+
 export async function listAdminOrders(
   db: Db,
   filters: AdminOrderListFilters = {},
@@ -103,6 +130,11 @@ export async function listAdminOrders(
     const q = `%${filters.q.trim().toLowerCase()}%`;
     conditions.push(
       sql`(lower(${orders.id}) like ${q} or lower(${orders.phone}) like ${q} or lower(${orders.fullName}) like ${q})`,
+    );
+  }
+  if (filters.preorderOnly) {
+    conditions.push(
+      sql`exists (select 1 from ${orderItems} where ${orderItems.orderId} = ${orders.id} and ${orderItems.isPreorder} = 1)`,
     );
   }
 
@@ -131,6 +163,19 @@ export async function updateOrderStatus(
   status: OrderRow['status'],
 ): Promise<OrderRow | null> {
   await db.update(orders).set({ status }).where(eq(orders.id, id));
+  const rows = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateOrderPayment(
+  db: Db,
+  id: string,
+  patch: {
+    paymentStatus?: OrderRow['paymentStatus'];
+    status?: OrderRow['status'];
+  },
+): Promise<OrderRow | null> {
+  await db.update(orders).set(patch).where(eq(orders.id, id));
   const rows = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
   return rows[0] ?? null;
 }

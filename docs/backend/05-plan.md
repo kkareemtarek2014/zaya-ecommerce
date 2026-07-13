@@ -139,7 +139,7 @@ Operational depth from the review. **Full spec — data model, APIs, prioritizat
 - **P21 — RBAC:** roles (Admin/Manager/Order/Product/Content) + permissions (code-config first).
 - **P22 — Automation:** Cron Triggers (auto-cancel unpaid + release stock, reminders, session cleanup,
   daily summary, payment/shipment sync).
-- **P23 — Homepage builder (future, flagged):** `homepage_blocks` managed from the dashboard.
+- **P23 — Homepage builder (flagged):** `homepage_blocks` managed from `/admin/homepage`.
 
 > Audit log (⭐) is already built in P8–P12 (`02` §2.16); P18 adds its viewer + activity feed.
 

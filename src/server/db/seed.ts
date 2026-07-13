@@ -169,6 +169,10 @@ async function main() {
       id: g.id,
       name: g.name,
       zone: g.zone,
+      // Default Bosta city name = our English name (admin can refine ids later)
+      bostaCityId: g.name,
+      bostaZone: null as string | null,
+      bostaDistrict: null as string | null,
     }));
     await insertChunks(
       (rows) => db.insert(governorates).values(rows).onConflictDoNothing(),

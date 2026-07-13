@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Banknote } from 'lucide-react';
+import { Banknote, CreditCard, Smartphone } from 'lucide-react';
 import { formatEGP } from '@/shared/utils/price';
 import {
   getGovernorate,
@@ -20,7 +20,10 @@ import {
   useCartStore,
 } from '@/features/cart';
 import { usePlaceOrder } from '@/features/order/hooks/useOrders';
-import { checkoutSchema, type CheckoutFormValues } from '../schema/checkout.schema';
+import {
+  checkoutSchema,
+  type CheckoutFormValues,
+} from '../schema/checkout.schema';
 import {
   buildShippingPreviewConfig,
   getShippingCost,
@@ -36,6 +39,8 @@ export function CheckoutForm() {
   const placeOrder = usePlaceOrder();
   const { data: storefrontConfig } = useStorefrontConfig();
   const [formError, setFormError] = useState<string | null>(null);
+
+  const onlinePayments = Boolean(storefrontConfig?.onlinePayments);
 
   const previewConfig = useMemo(
     () => buildShippingPreviewConfig(storefrontConfig),
@@ -53,8 +58,8 @@ export function CheckoutForm() {
   });
 
   const governorate = watch('governorate');
+  const paymentMethod = watch('paymentMethod');
   const zone = governorate ? getGovernorate(governorate)?.zone : undefined;
-  // Preview only — free shipping keyed off pre-discount subtotal (server matches).
   const shipping = governorate
     ? getShippingCost(zone, subtotal, previewConfig)
     : null;
@@ -83,6 +88,11 @@ export function CheckoutForm() {
 
   const onSubmit = async (values: CheckoutFormValues) => {
     setFormError(null);
+    const method =
+      onlinePayments &&
+      (values.paymentMethod === 'card' || values.paymentMethod === 'wallet')
+        ? values.paymentMethod
+        : 'cod';
     try {
       await placeOrder.mutateAsync({
         items: items.map((i) => ({
@@ -97,7 +107,7 @@ export function CheckoutForm() {
           street: values.street,
           ...(values.notes ? { notes: values.notes } : {}),
         },
-        paymentMethod: 'cod',
+        paymentMethod: method,
         ...(couponCode ? { promoCode: couponCode } : {}),
         ...(note ? { note } : {}),
       });
@@ -181,70 +191,114 @@ export function CheckoutForm() {
 
         <section className="space-y-4">
           <h2 className="font-display text-xl font-semibold">Payment</h2>
-          <label className="flex cursor-pointer items-center gap-4 rounded-lg border border-brand-primary bg-brand-blush/50 p-4">
-            <input
-              type="radio"
-              value="cod"
-              defaultChecked
-              className="size-4 accent-brand-primary"
-              {...register('paymentMethod')}
-            />
-            <Banknote className="size-5 text-brand-primary" />
-            <div>
-              <p className="text-sm font-medium">Cash on delivery</p>
-              <p className="text-xs text-text-muted">
-                Pay when your order arrives. Card payments coming soon.
-              </p>
-            </div>
-          </label>
+          <div className="space-y-3">
+            <label
+              className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 ${
+                paymentMethod === 'cod'
+                  ? 'border-brand-primary bg-brand-blush/50'
+                  : 'border-border'
+              }`}
+            >
+              <input
+                type="radio"
+                value="cod"
+                className="size-4 accent-brand-primary"
+                {...register('paymentMethod')}
+              />
+              <Banknote className="size-5 text-brand-primary" />
+              <div>
+                <p className="text-sm font-medium">Cash on delivery</p>
+                <p className="text-xs text-text-muted">
+                  Pay when your order arrives.
+                </p>
+              </div>
+            </label>
+
+            {onlinePayments ? (
+              <>
+                <label
+                  className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 ${
+                    paymentMethod === 'card'
+                      ? 'border-brand-primary bg-brand-blush/50'
+                      : 'border-border'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    value="card"
+                    className="size-4 accent-brand-primary"
+                    {...register('paymentMethod')}
+                  />
+                  <CreditCard className="size-5 text-brand-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Card</p>
+                    <p className="text-xs text-text-muted">
+                      Pay securely with Visa / Mastercard (Paymob).
+                    </p>
+                  </div>
+                </label>
+                <label
+                  className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 ${
+                    paymentMethod === 'wallet'
+                      ? 'border-brand-primary bg-brand-blush/50'
+                      : 'border-border'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    value="wallet"
+                    className="size-4 accent-brand-primary"
+                    {...register('paymentMethod')}
+                  />
+                  <Smartphone className="size-5 text-brand-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Mobile wallet</p>
+                    <p className="text-xs text-text-muted">
+                      Vodafone Cash, Orange Cash, and more via Paymob.
+                    </p>
+                  </div>
+                </label>
+              </>
+            ) : null}
+          </div>
+          {errors.paymentMethod ? (
+            <p className="text-xs text-status-error">
+              {errors.paymentMethod.message}
+            </p>
+          ) : null}
         </section>
       </div>
 
       <aside className="h-fit rounded-lg border border-border bg-surface-raised p-6">
-        <h2 className="font-display text-xl font-semibold">Your Order</h2>
-
-        <ul className="mt-4 space-y-3 border-b border-border pb-4 text-sm">
-          {items.map((item) => (
-            <li key={item.productId} className="flex justify-between gap-3">
-              <span className="line-clamp-1 text-text-secondary">
-                {item.name} × {item.quantity}
-              </span>
-              <span className="shrink-0 font-medium">
-                {formatEGP(item.unitPrice * item.quantity)}
-              </span>
-            </li>
-          ))}
-        </ul>
-
+        <h2 className="font-display text-xl font-semibold">Order Summary</h2>
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-text-secondary">Subtotal</dt>
             <dd className="font-medium">{formatEGP(subtotal)}</dd>
           </div>
-          {discount > 0 && (
+          {discount > 0 ? (
             <div className="flex justify-between text-status-success">
-              <dt>Discount{couponCode ? ` (${couponCode})` : ''}</dt>
-              <dd className="font-medium">-{formatEGP(discount)}</dd>
+              <dt>Discount</dt>
+              <dd>-{formatEGP(discount)}</dd>
             </div>
-          )}
+          ) : null}
           <div className="flex justify-between">
             <dt className="text-text-secondary">Shipping</dt>
-            <dd className="font-medium">
-              {shipping === null
-                ? 'Select governorate'
-                : shipping === 0
-                  ? 'Free'
-                  : formatEGP(shipping)}
+            <dd>
+              {shipping === null ? (
+                <span className="text-text-muted">Select governorate</span>
+              ) : shipping === 0 ? (
+                'Free'
+              ) : (
+                formatEGP(shipping)
+              )}
             </dd>
           </div>
-          <div className="flex justify-between border-t border-border pt-3 text-base">
-            <dt className="font-semibold">Total</dt>
-            <dd className="font-semibold text-brand-primary">
-              {formatEGP(total)}
-            </dd>
+          <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
+            <dt>Total</dt>
+            <dd className="text-brand-primary">{formatEGP(total)}</dd>
           </div>
         </dl>
-
         <Button
           type="submit"
           fullWidth
@@ -252,11 +306,10 @@ export function CheckoutForm() {
           className="mt-5"
           isLoading={placeOrder.isPending}
         >
-          {placeOrder.isPending ? 'Placing order…' : 'Place order'}
+          {paymentMethod === 'card' || paymentMethod === 'wallet'
+            ? 'Place order & pay'
+            : 'Place order'}
         </Button>
-        <p className="mt-3 text-center text-xs text-text-muted">
-          By placing your order you agree to our delivery terms.
-        </p>
       </aside>
     </form>
   );

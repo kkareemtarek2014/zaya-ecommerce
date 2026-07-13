@@ -1,12 +1,12 @@
 import { withHandler } from '@/server/http/handler';
-import { requireAdmin } from '@/server/auth/require-admin';
+import { requirePermission } from '@/server/auth/require-admin';
 import * as promos from '@/server/services/admin-promos.service';
 import { writeAuditLog } from '@/server/services/audit.service';
 
 type Ctx = { params: Promise<{ code: string }> };
 
 export const PUT = withHandler(async (request, context) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'promos:write');
   const { code } = await (context as Ctx).params;
   const decodedCode = decodeURIComponent(code);
   const body: unknown = await request.json();
@@ -21,7 +21,7 @@ export const PUT = withHandler(async (request, context) => {
 });
 
 export const PATCH = withHandler(async (request, context) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'promos:write');
   const { code } = await (context as Ctx).params;
   const decodedCode = decodeURIComponent(code);
   const body: unknown = await request.json();
@@ -37,7 +37,7 @@ export const PATCH = withHandler(async (request, context) => {
 });
 
 export const DELETE = withHandler(async (request, context) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'promos:write');
   const { code } = await (context as Ctx).params;
   const decodedCode = decodeURIComponent(code);
   const result = await promos.deleteAdminPromo(decodedCode);

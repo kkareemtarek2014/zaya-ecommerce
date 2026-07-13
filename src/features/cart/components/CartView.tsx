@@ -15,6 +15,7 @@ import {
 } from '../store/cart.store';
 import { CartItemRow } from './CartItemRow';
 import { OrderNote } from './OrderNote';
+import { CartBundleCallout } from './CartBundleCallout';
 
 export function CartView() {
   // Avoid hydration mismatch: the persisted cart only exists on the client.
@@ -93,6 +94,8 @@ export function CartView() {
             You’ve unlocked <strong>free shipping</strong>!
           </p>
         )}
+
+        <CartBundleCallout items={items} />
 
         <Link href="/checkout" className="mt-5 block">
           <Button fullWidth size="lg">

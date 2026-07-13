@@ -66,18 +66,19 @@ Worker and the local build is green. Grouped by concern.
 - [ ] `basePrice` visible only in admin (`AdminProductDTO`), never in storefront responses.
 
 ## Integrations — Paymob & Bosta (P13–P15 — see `09-integrations-bosta-paymob.md`)
-- [ ] Checkout offers `cod` (unchanged), `card`, `wallet`; COD flow works exactly as before.
-- [ ] Card/wallet: order created `pending` → Paymob checkout → **webhook** flips to `paid`/`confirmed`.
-- [ ] Paymob webhook verifies **HMAC-SHA512**; invalid signature → 403 and no state change.
-- [ ] Payment webhook is idempotent (dedupe on transaction id); failed payment allows retry.
-- [ ] Gateway amount = server order total × 100 (piasters); never derived from the client.
-- [ ] Paid/confirmed order auto-creates a **Bosta** delivery with correct COD amount + address.
-- [ ] Governorate → Bosta city/zone mapping resolves for all 27 governorates.
-- [ ] Bosta webhook maps delivery state → `OrderStatus`; idempotent; signature/secret verified.
-- [ ] Tracking number + link shown on order confirmation, account order, and admin.
-- [ ] Admin can create/refresh a Bosta shipment and see payment status per order.
+- [x] Checkout offers `cod` (unchanged), `card`, `wallet`; COD flow works exactly as before.
+- [x] Card/wallet: order created `pending` → Paymob checkout → **webhook** flips to `paid`/`confirmed`.
+- [x] Paymob webhook verifies **HMAC-SHA512**; invalid signature → 403 and no state change.
+- [x] Payment webhook is idempotent (dedupe on transaction id); failed payment allows retry.
+- [x] Gateway amount = server order total × 100 (piasters); never derived from the client.
+- [x] Paid/confirmed order auto-creates a **Bosta** delivery with correct COD amount + address.
+- [x] Governorate → Bosta city/zone mapping resolves for all 27 governorates.
+- [x] Bosta webhook maps delivery state → `OrderStatus`; idempotent; signature/secret verified.
+- [x] Tracking number + link shown on order confirmation, account order, and admin.
+- [x] Admin can create/refresh a Bosta shipment and see payment status per order.
+- [x] Webhook dedupe (`webhook_events`) + provider retries/backoff; hourly reconcile job.
 - [ ] Secrets (`PAYMOB_*`, `BOSTA_*`) set in Wrangler; **production** keys used at go-live.
-- [ ] Reconciliation: order ↔ payment ↔ shipment states are consistent.
+- [ ] Reconciliation: order ↔ payment ↔ shipment states are consistent (verify live after cutover).
 
 ## Production enhancements (P16–P23 — see `10-enhancements.md`)
 Top-5 first (⭐):
@@ -99,21 +100,21 @@ Remaining:
 - [ ] Expanded site settings (logo/favicon/contacts/social/WhatsApp/SEO defaults/footer/maintenance mode).
 - [ ] RBAC roles (Admin/Manager/Order/Product/Content) + permission checks on routes/menus.
 - [ ] Cron Triggers: auto-cancel unpaid + release stock, reminders, session cleanup, daily summary, payment/shipment sync — all idempotent.
-- [ ] (Future/flagged) Homepage builder via `homepage_blocks`.
+- [x] (Flagged) Homepage builder via `homepage_blocks` + `homepage_builder` flag.
 
 ## Sourcing, pricing & merchandising (P24–P26 — see `11-sourcing-pricing-merchandising.md`)
-- [ ] Landed-cost engine: `computeSellPrice` matches the §1.2 formula for a sample USD item.
-- [ ] Pricing inputs (FX rate, customs, VAT, handling, margin) are in `settings` and audit-logged; rates verified against current regulations.
-- [ ] `fx-rate-refresh` cron updates USD/EGP and re-prices Temu-linked products; `fx_rates` history kept.
-- [ ] `dynamic_pricing` flag: OFF = current flat model unchanged; ON = landed-cost engine; cutover re-prices.
-- [ ] No cost inputs (`base_price`, `base_price_usd`, `landed_cost`, rates) appear in any API response.
-- [ ] Temu importer: paste URL → review-ready **draft** with images in R2, USD base, mapped variants; no auto-publish; rate-limited + audit-logged.
-- [ ] `temu-stock-sync` cron: source OOS → local `stock_qty=0` + notification; idempotent; respects API limits.
-- [ ] Fulfilment: `fulfilment_type` drives stock + shipping timeline; **checkout never orders from Temu** (Bosta only).
-- [ ] Bundles (e.g. Buy-2-Get-1) evaluated + discounted **server-side**; admin CRUD + scheduling.
-- [ ] Pre-orders allowed only when `preorder_enabled` + OOS, clearly labelled with extended ETA.
-- [ ] Product shipping timeline shown (1–2 days local vs 2–3 weeks dropship/pre-order).
-- [ ] Social proof (reviews + Instagram feed) and localized descriptions render; each behind a flag.
+- [x] Landed-cost engine: `computeSellPrice` matches the §1.2 formula for a sample USD item.
+- [x] Pricing inputs (FX rate, customs, VAT, handling, margin) are in `settings` and audit-logged; rates verified against current regulations.
+- [x] `fx-rate-refresh` cron updates USD/EGP and re-prices Temu-linked products; `fx_rates` history kept.
+- [x] `dynamic_pricing` flag: OFF = current flat model unchanged; ON = landed-cost engine; cutover re-prices.
+- [x] No cost inputs (`base_price`, `base_price_usd`, `landed_cost`, rates) appear in any API response.
+- [x] Temu importer: paste URL → review-ready **draft** with images in R2, USD base, mapped variants; no auto-publish; rate-limited + audit-logged.
+- [x] `temu-stock-sync` cron: source OOS → local `stock_qty=0` + notification; idempotent; respects API limits.
+- [x] Fulfilment: `fulfilment_type` drives stock + shipping timeline; **checkout never orders from Temu** (Bosta only).
+- [x] Bundles (e.g. Buy-2-Get-1) evaluated + discounted **server-side**; admin CRUD + scheduling.
+- [x] Pre-orders allowed only when `preorder_enabled` + OOS, clearly labelled with extended ETA.
+- [x] Product shipping timeline shown (1–2 days local vs 2–3 weeks dropship/pre-order).
+- [x] Social proof (reviews + Instagram feed) and localized descriptions render; each behind a flag.
 
 ## Build gates (must be green every phase)
 - [x] `pnpm build` — 0 errors.

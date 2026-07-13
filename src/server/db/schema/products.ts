@@ -34,4 +34,27 @@ export const products = sqliteTable('products', {
     .notNull()
     .default('plain'),
   archivedAt: integer('archived_at', { mode: 'timestamp_ms' }),
+  /** Temu / USD source cost — server-only (P24). */
+  basePriceUsd: real('base_price_usd'),
+  /** Last landed-cost snapshot in EGP — server-only (P24). */
+  landedCost: integer('landed_cost'),
+  /** P25 sourcing */
+  sourceProvider: text('source_provider'),
+  sourceUrl: text('source_url'),
+  sourceProductId: text('source_product_id'),
+  sourceVariantMap: text('source_variant_map', { mode: 'json' }).$type<
+    Record<string, unknown>
+  >(),
+  sourceInStock: integer('source_in_stock', { mode: 'boolean' }),
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp_ms' }),
+  fulfilmentType: text('fulfilment_type', {
+    enum: ['local_stock', 'dropship'],
+  })
+    .notNull()
+    .default('local_stock'),
+  /** P26 pre-orders */
+  preorderEnabled: integer('preorder_enabled', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  preorderEtaDays: integer('preorder_eta_days'),
 });

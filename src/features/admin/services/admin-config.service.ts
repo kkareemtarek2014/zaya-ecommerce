@@ -3,13 +3,17 @@ import type {
   AdminBridalRequestDTO,
   AdminPromoDTO,
   AdminPromoWrite,
+  AdminPromoUpdate,
   AdminSettingsDTO,
   AdminSettingsWrite,
   AdminGovernorateWrite,
   ShippingZoneDTO,
   StorefrontConfigDTO,
 } from '@/shared/contracts/admin-config.contract';
-import type { GovernorateDTO } from '@/shared/contracts/product.contract';
+import type {
+  AdminGovernorateDTO,
+  GovernorateDTO,
+} from '@/shared/contracts/product.contract';
 import type { Paginated } from '@/shared/contracts/admin-catalog.contract';
 
 export type BridalListParams = {
@@ -34,16 +38,22 @@ export const storefrontConfigService = {
 };
 
 export const adminLocationsService = {
-  listGovernorates(): Promise<GovernorateDTO[]> {
+  listGovernorates(): Promise<AdminGovernorateDTO[]> {
     return api.get('/api/admin/governorates');
   },
-  createGovernorate(input: AdminGovernorateWrite): Promise<GovernorateDTO> {
+  createGovernorate(input: AdminGovernorateWrite): Promise<AdminGovernorateDTO> {
     return api.post('/api/admin/governorates', input);
   },
   updateGovernorate(
     id: string,
-    input: { name?: string; zone?: GovernorateDTO['zone'] },
-  ): Promise<GovernorateDTO> {
+    input: {
+      name?: string;
+      zone?: GovernorateDTO['zone'];
+      bostaCityId?: string | null;
+      bostaZone?: string | null;
+      bostaDistrict?: string | null;
+    },
+  ): Promise<AdminGovernorateDTO> {
     return api.put(`/api/admin/governorates/${encodeURIComponent(id)}`, input);
   },
   deleteGovernorate(id: string): Promise<{ ok: true }> {
@@ -69,12 +79,7 @@ export const adminPromosService = {
   },
   update(
     code: string,
-    input: Partial<{
-      type: AdminPromoDTO['type'];
-      value: number;
-      minOrderValue: number | null;
-      active: boolean;
-    }>,
+    input: AdminPromoUpdate,
   ): Promise<AdminPromoDTO> {
     return api.put(`/api/admin/promos/${encodeURIComponent(code)}`, input);
   },

@@ -1,12 +1,12 @@
 import { withHandler } from '@/server/http/handler';
-import { requireAdmin } from '@/server/auth/require-admin';
+import { requirePermission } from '@/server/auth/require-admin';
 import * as locations from '@/server/services/admin-locations.service';
 import { writeAuditLog } from '@/server/services/audit.service';
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export const PUT = withHandler(async (request, context) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'locations:write');
   const { id } = await (context as Ctx).params;
   const body: unknown = await request.json();
   const governorate = await locations.updateAdminGovernorate(id, body);
@@ -20,7 +20,7 @@ export const PUT = withHandler(async (request, context) => {
 });
 
 export const DELETE = withHandler(async (request, context) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'locations:write');
   const { id } = await (context as Ctx).params;
   const result = await locations.deleteAdminGovernorate(id);
   await writeAuditLog({

@@ -13,6 +13,7 @@ import {
   MAX_BRIDAL_BYTES,
   putBridalUpload,
 } from '@/server/services/upload.service';
+import { createNotification } from '@/server/services/notifications.service';
 
 function generateBridalId(): string {
   const stamp = Date.now().toString(36).toUpperCase();
@@ -94,6 +95,14 @@ export async function createBridalRequestFromForm(
     fileName,
     fileType,
     createdAt: now,
+  });
+
+  await createNotification(db, {
+    type: 'bridal_request',
+    title: 'New bridal request',
+    body: `${parsed.data.fullName} · ${parsed.data.phone}`,
+    entity: 'bridal_request',
+    entityId: row.id,
   });
 
   return {

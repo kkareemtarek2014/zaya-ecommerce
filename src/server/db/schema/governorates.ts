@@ -6,4 +6,8 @@ export const governorates = sqliteTable('governorates', {
   zone: text('zone', {
     enum: ['cairo_giza', 'near', 'far'],
   }).notNull(),
+  /** Bosta city id or accepted city name (P14). */
+  bostaCityId: text('bosta_city_id'),
+  bostaZone: text('bosta_zone'),
+  bostaDistrict: text('bosta_district'),
 });

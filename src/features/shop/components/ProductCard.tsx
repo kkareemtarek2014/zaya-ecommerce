@@ -26,6 +26,7 @@ export function ProductCard({ product }: { product: Product }) {
         ((product.compareAtPrice! - price) / product.compareAtPrice!) * 100,
       )
     : 0;
+  const canAdd = product.inStock || Boolean(product.preorderAvailable);
   const hoverImage = product.images[1];
 
   return (
@@ -61,7 +62,12 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="pointer-events-none absolute left-3 top-3 flex flex-col gap-1.5">
           {isBestSeller && <Badge tone="accent">Best Seller</Badge>}
           {onSale && <Badge tone="error">Save {savePct}%</Badge>}
-          {!product.inStock && <Badge tone="muted">Sold Out</Badge>}
+          {!product.inStock && product.preorderAvailable ? (
+            <Badge tone="accent">Pre-order</Badge>
+          ) : null}
+          {!product.inStock && !product.preorderAvailable ? (
+            <Badge tone="muted">Sold Out</Badge>
+          ) : null}
         </div>
 
         {/* Wishlist */}
@@ -106,7 +112,7 @@ export function ProductCard({ product }: { product: Product }) {
             <button
               type="button"
               aria-label={`Add ${product.name} to bag`}
-              disabled={!product.inStock}
+              disabled={!canAdd}
               onClick={() => addItem(product)}
               className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-blush text-brand-primary transition-all hover:bg-brand-primary hover:text-text-inverse disabled:cursor-not-allowed disabled:opacity-40 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
             >

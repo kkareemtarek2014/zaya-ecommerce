@@ -1,8 +1,11 @@
 import 'server-only';
 import {
   adminCategoryWriteSchema,
+  adminProductBulkSchema,
   adminProductWriteSchema,
   type AdminCategoryDTO,
+  type AdminCsvImportReport,
+  type AdminProductBulkResult,
   type AdminProductDTO,
   type Paginated,
   type ProductStatus,
@@ -17,8 +20,11 @@ import * as categoriesRepo from '@/server/repositories/categories.repo';
 import * as inventoryRepo from '@/server/repositories/inventory.repo';
 import * as productsRepo from '@/server/repositories/products.repo';
 import {
+  computeLandedCost,
   computeSellPrice,
-  getProfitMargin,
+  getPricingSettings,
+  pricingInputFromRow,
+  type PricingSettings,
 } from '@/server/services/pricing.service';
 import {
   deleteUploadObject,
@@ -29,6 +35,7 @@ import {
   availableQty,
   isEffectivelyInStock,
 } from '@/server/lib/stock';
+import { prepareProductDescription } from '@/server/lib/sanitize-html';
 import type { ProductRow } from '@/server/repositories/products.repo';
 
 function slugify(name: string): string {
@@ -46,13 +53,16 @@ function emptyToNull(value: string | null | undefined): string | null {
   return trimmed.length ? trimmed : null;
 }
 
-function toAdminProduct(row: ProductRow, margin: number): AdminProductDTO {
+function toAdminProduct(
+  row: ProductRow,
+  pricing: PricingSettings,
+): AdminProductDTO {
   const dto: AdminProductDTO = {
     id: row.id,
     name: row.name,
     category: row.categorySlug,
     basePrice: row.basePrice,
-    price: computeSellPrice(row.basePrice, margin),
+    price: computeSellPrice(pricingInputFromRow(row), pricing),
     description: row.description,
     images: row.images ?? [],
     rating: row.rating,
@@ -74,6 +84,16 @@ function toAdminProduct(row: ProductRow, margin: number): AdminProductDTO {
   if (row.seoDescription) dto.seoDescription = row.seoDescription;
   if (row.ogImage) dto.ogImage = row.ogImage;
   if (row.canonicalUrl) dto.canonicalUrl = row.canonicalUrl;
+  if (row.basePriceUsd != null) dto.basePriceUsd = row.basePriceUsd;
+  if (row.landedCost != null) dto.landedCost = row.landedCost;
+  if (row.sourceProvider) dto.sourceProvider = row.sourceProvider;
+  if (row.sourceUrl) dto.sourceUrl = row.sourceUrl;
+  if (row.sourceProductId) dto.sourceProductId = row.sourceProductId;
+  if (row.sourceInStock != null) dto.sourceInStock = row.sourceInStock;
+  if (row.lastSyncedAt) dto.lastSyncedAt = row.lastSyncedAt.toISOString();
+  dto.fulfilmentType = row.fulfilmentType ?? 'local_stock';
+  dto.preorderEnabled = row.preorderEnabled ?? false;
+  dto.preorderEtaDays = row.preorderEtaDays ?? null;
   dto.archivedAt = row.archivedAt ? row.archivedAt.toISOString() : null;
   return dto;
 }
@@ -140,7 +160,7 @@ export async function listAdminProducts(url: URL): Promise<Paginated<AdminProduc
   }
 
   const db = await getRequestDb();
-  const margin = await getProfitMargin(db);
+  const pricing = await getPricingSettings(db);
   const { rows, total } = await productsRepo.findProductsAdmin(db, {
     page,
     pageSize,
@@ -154,7 +174,7 @@ export async function listAdminProducts(url: URL): Promise<Paginated<AdminProduc
   });
 
   return {
-    items: rows.map((r) => toAdminProduct(r, margin)),
+    items: rows.map((r) => toAdminProduct(r, pricing)),
     page,
     pageSize,
     total,
@@ -164,10 +184,10 @@ export async function listAdminProducts(url: URL): Promise<Paginated<AdminProduc
 
 export async function getAdminProduct(id: string): Promise<AdminProductDTO> {
   const db = await getRequestDb();
-  const margin = await getProfitMargin(db);
+  const pricing = await getPricingSettings(db);
   const row = await productsRepo.findProductByIdAny(db, id);
   if (!row) throw new NotFoundError('Product not found');
-  return toAdminProduct(row, margin);
+  return toAdminProduct(row, pricing);
 }
 
 export async function createAdminProduct(raw: unknown): Promise<AdminProductDTO> {
@@ -188,7 +208,26 @@ export async function createAdminProduct(raw: unknown): Promise<AdminProductDTO>
     emptyToNull(parsed.data.sku) ?? `ZAYA-${id.toUpperCase()}`;
   const stockQty = parsed.data.stockQty ?? (parsed.data.inStock ? 50 : 0);
 
+  const desc = prepareProductDescription(
+    parsed.data.description,
+    parsed.data.descriptionFormat ?? 'plain',
+  );
+
   await assertUniqueSlugSku(db, slug, sku);
+
+  const pricing = await getPricingSettings(db);
+  const basePriceUsd =
+    parsed.data.basePriceUsd != null && parsed.data.basePriceUsd > 0
+      ? parsed.data.basePriceUsd
+      : null;
+  const landedCost =
+    basePriceUsd != null ? computeLandedCost(basePriceUsd, pricing) : null;
+  const fulfilmentType = parsed.data.fulfilmentType ?? 'local_stock';
+  const preorderEnabled = parsed.data.preorderEnabled ?? false;
+  const preorderEtaDays =
+    preorderEnabled && parsed.data.preorderEtaDays != null
+      ? parsed.data.preorderEtaDays
+      : null;
 
   const row = await productsRepo.insertProduct(db, {
     id,
@@ -196,7 +235,7 @@ export async function createAdminProduct(raw: unknown): Promise<AdminProductDTO>
     categorySlug: parsed.data.categorySlug,
     basePrice: parsed.data.basePrice,
     compareAtPrice: parsed.data.compareAtPrice ?? null,
-    description: parsed.data.description,
+    description: desc.description,
     images: parsed.data.images ?? [],
     rating: 0,
     reviewCount: 0,
@@ -213,8 +252,13 @@ export async function createAdminProduct(raw: unknown): Promise<AdminProductDTO>
     seoDescription: emptyToNull(parsed.data.seoDescription),
     ogImage: emptyToNull(parsed.data.ogImage),
     canonicalUrl: emptyToNull(parsed.data.canonicalUrl),
-    descriptionFormat: 'plain',
+    descriptionFormat: desc.descriptionFormat,
     archivedAt: archivedAtForStatus(status, null),
+    basePriceUsd,
+    landedCost,
+    fulfilmentType,
+    preorderEnabled,
+    preorderEtaDays,
   });
 
   if (stockQty > 0) {
@@ -232,8 +276,7 @@ export async function createAdminProduct(raw: unknown): Promise<AdminProductDTO>
     });
   }
 
-  const margin = await getProfitMargin(db);
-  return toAdminProduct(row, margin);
+  return toAdminProduct(row, pricing);
 }
 
 export async function updateAdminProduct(
@@ -264,13 +307,37 @@ export async function updateAdminProduct(
   await assertUniqueSlugSku(db, slug, sku, id);
 
   const stockQty = existing.stockQty;
+  const desc = prepareProductDescription(
+    parsed.data.description,
+    parsed.data.descriptionFormat ?? existing.descriptionFormat ?? 'plain',
+  );
+
+  const pricing = await getPricingSettings(db);
+  const basePriceUsd =
+    parsed.data.basePriceUsd !== undefined
+      ? parsed.data.basePriceUsd != null && parsed.data.basePriceUsd > 0
+        ? parsed.data.basePriceUsd
+        : null
+      : existing.basePriceUsd;
+  const landedCost =
+    basePriceUsd != null ? computeLandedCost(basePriceUsd, pricing) : null;
+  const fulfilmentType =
+    parsed.data.fulfilmentType ?? existing.fulfilmentType ?? 'local_stock';
+  const preorderEnabled =
+    parsed.data.preorderEnabled ?? existing.preorderEnabled ?? false;
+  const preorderEtaDays = preorderEnabled
+    ? parsed.data.preorderEtaDays !== undefined
+      ? parsed.data.preorderEtaDays
+      : existing.preorderEtaDays
+    : null;
 
   const row = await productsRepo.updateProduct(db, id, {
     name: parsed.data.name,
     categorySlug: parsed.data.categorySlug,
     basePrice: parsed.data.basePrice,
     compareAtPrice: parsed.data.compareAtPrice ?? null,
-    description: parsed.data.description,
+    description: desc.description,
+    descriptionFormat: desc.descriptionFormat,
     images: parsed.data.images ?? existing.images,
     inStock: parsed.data.inStock,
     featured: parsed.data.featured,
@@ -296,9 +363,13 @@ export async function updateAdminProduct(
         ? emptyToNull(parsed.data.canonicalUrl)
         : existing.canonicalUrl,
     archivedAt: archivedAtForStatus(status, existing),
+    basePriceUsd,
+    landedCost,
+    fulfilmentType,
+    preorderEnabled,
+    preorderEtaDays,
   });
-  const margin = await getProfitMargin(db);
-  return toAdminProduct(row, margin);
+  return toAdminProduct(row, pricing);
 }
 
 export async function deleteAdminProduct(id: string): Promise<{ ok: true }> {
@@ -342,8 +413,372 @@ export async function restoreAdminProduct(id: string): Promise<AdminProductDTO> 
     status: 'draft',
     archivedAt: null,
   });
-  const margin = await getProfitMargin(db);
-  return toAdminProduct(row, margin);
+  const pricing = await getPricingSettings(db);
+  return toAdminProduct(row, pricing);
+}
+
+export async function duplicateAdminProduct(
+  id: string,
+): Promise<AdminProductDTO> {
+  const db = await getRequestDb();
+  const source = await productsRepo.findProductByIdAny(db, id);
+  if (!source) throw new NotFoundError('Product not found');
+
+  const newId = `p-${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+  const slug = `${slugify(source.name)}-${newId.slice(2, 6)}`;
+  const sku = `ZAYA-${newId.toUpperCase()}`;
+
+  const row = await productsRepo.insertProduct(db, {
+    id: newId,
+    name: `${source.name} (copy)`,
+    categorySlug: source.categorySlug,
+    basePrice: source.basePrice,
+    compareAtPrice: source.compareAtPrice,
+    description: source.description,
+    images: [...(source.images ?? [])],
+    rating: 0,
+    reviewCount: 0,
+    inStock: false,
+    featured: false,
+    tags: source.tags,
+    createdAt: new Date(),
+    slug,
+    sku,
+    status: 'draft',
+    stockQty: 0,
+    reservedQty: 0,
+    seoTitle: null,
+    seoDescription: null,
+    ogImage: null,
+    canonicalUrl: null,
+    descriptionFormat: source.descriptionFormat ?? 'plain',
+    archivedAt: null,
+    basePriceUsd: source.basePriceUsd,
+    landedCost: source.landedCost,
+    sourceProvider: source.sourceProvider,
+    sourceUrl: source.sourceUrl,
+    sourceProductId: source.sourceProductId
+      ? `${source.sourceProductId}-copy`
+      : null,
+    sourceVariantMap: source.sourceVariantMap,
+    sourceInStock: source.sourceInStock,
+    lastSyncedAt: null,
+    fulfilmentType: source.fulfilmentType ?? 'local_stock',
+    preorderEnabled: source.preorderEnabled ?? false,
+    preorderEtaDays: source.preorderEtaDays,
+  });
+
+  const pricing = await getPricingSettings(db);
+  return toAdminProduct(row, pricing);
+}
+
+export async function bulkAdminProducts(
+  raw: unknown,
+): Promise<AdminProductBulkResult> {
+  const parsed = adminProductBulkSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new ValidationError('Validation failed', parsed.error.flatten());
+  }
+
+  const { ids, action, payload } = parsed.data;
+  const db = await getRequestDb();
+
+  if (action === 'set-category') {
+    const slug = payload?.categorySlug;
+    if (!slug) throw new ValidationError('categorySlug required for set-category');
+    const cat = await categoriesRepo.findCategoryBySlug(db, slug);
+    if (!cat) throw new ValidationError('Invalid category');
+  }
+
+  const results: AdminProductBulkResult['results'] = [];
+
+  for (const productId of ids) {
+    try {
+      const existing = await productsRepo.findProductByIdAny(db, productId);
+      if (!existing) {
+        results.push({ id: productId, ok: false, error: 'Not found' });
+        continue;
+      }
+
+      switch (action) {
+        case 'archive':
+          await productsRepo.updateProduct(db, productId, {
+            status: 'archived',
+            archivedAt: existing.archivedAt ?? new Date(),
+          });
+          break;
+        case 'publish':
+          await productsRepo.updateProduct(db, productId, {
+            status: 'published',
+            archivedAt: null,
+          });
+          break;
+        case 'hide':
+          await productsRepo.updateProduct(db, productId, {
+            status: 'hidden',
+            archivedAt: null,
+          });
+          break;
+        case 'set-category':
+          await productsRepo.updateProduct(db, productId, {
+            categorySlug: payload!.categorySlug!,
+          });
+          break;
+      }
+      results.push({ id: productId, ok: true });
+    } catch (err) {
+      results.push({
+        id: productId,
+        ok: false,
+        error: err instanceof Error ? err.message : 'Failed',
+      });
+    }
+  }
+
+  return { results };
+}
+
+function csvEscape(value: string | number | boolean | null | undefined): string {
+  const s = value == null ? '' : String(value);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+export async function exportAdminProductsCsv(): Promise<string> {
+  const db = await getRequestDb();
+  const { rows } = await productsRepo.findProductsAdmin(db, {
+    status: 'all',
+    page: 1,
+    pageSize: 100,
+    sort: 'newest',
+  });
+  // Fetch all pages
+  const all: ProductRow[] = [...rows];
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      (
+        await productsRepo.findProductsAdmin(db, {
+          status: 'all',
+          page: 1,
+          pageSize: 1,
+        })
+      ).total / 100,
+    ),
+  );
+  for (let page = 2; page <= totalPages; page++) {
+    const next = await productsRepo.findProductsAdmin(db, {
+      status: 'all',
+      page,
+      pageSize: 100,
+      sort: 'newest',
+    });
+    all.push(...next.rows);
+  }
+
+  const header = [
+    'id',
+    'name',
+    'categorySlug',
+    'basePrice',
+    'compareAtPrice',
+    'description',
+    'descriptionFormat',
+    'sku',
+    'slug',
+    'status',
+    'stockQty',
+    'inStock',
+    'featured',
+    'tags',
+    'images',
+  ];
+  const lines = [header.join(',')];
+  for (const row of all) {
+    lines.push(
+      [
+        csvEscape(row.id),
+        csvEscape(row.name),
+        csvEscape(row.categorySlug),
+        csvEscape(row.basePrice),
+        csvEscape(row.compareAtPrice),
+        csvEscape(row.description),
+        csvEscape(row.descriptionFormat),
+        csvEscape(row.sku),
+        csvEscape(row.slug),
+        csvEscape(row.status),
+        csvEscape(row.stockQty),
+        csvEscape(row.inStock),
+        csvEscape(row.featured),
+        csvEscape((row.tags ?? []).join('|')),
+        csvEscape((row.images ?? []).join('|')),
+      ].join(','),
+    );
+  }
+  return lines.join('\n');
+}
+
+function parseCsvLine(line: string): string[] {
+  const cells: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]!;
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') {
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cur += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ',') {
+      cells.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  cells.push(cur);
+  return cells;
+}
+
+export async function importAdminProductsCsv(
+  text: string,
+): Promise<AdminCsvImportReport> {
+  const lines = text
+    .replace(/^\uFEFF/, '')
+    .split(/\r?\n/)
+    .filter((l) => l.trim().length > 0);
+  if (lines.length < 2) {
+    throw new ValidationError('CSV must include a header and at least one row');
+  }
+
+  const header = parseCsvLine(lines[0]!).map((h) => h.trim());
+  const idx = (name: string) => header.indexOf(name);
+  const required = ['name', 'categorySlug', 'basePrice', 'description'] as const;
+  for (const col of required) {
+    if (idx(col) < 0) throw new ValidationError(`Missing CSV column: ${col}`);
+  }
+
+  const db = await getRequestDb();
+  let created = 0;
+  let updated = 0;
+  const errors: AdminCsvImportReport['errors'] = [];
+
+  for (let r = 1; r < lines.length; r++) {
+    const cells = parseCsvLine(lines[r]!);
+    const get = (name: string) => {
+      const i = idx(name);
+      return i >= 0 ? (cells[i] ?? '').trim() : '';
+    };
+
+    try {
+      const name = get('name');
+      const categorySlug = get('categorySlug');
+      const basePrice = Number(get('basePrice'));
+      const description = get('description');
+      if (!name || !categorySlug || !description || !Number.isFinite(basePrice)) {
+        throw new Error('Invalid required fields');
+      }
+      const cat = await categoriesRepo.findCategoryBySlug(db, categorySlug);
+      if (!cat) throw new Error('Invalid category');
+
+      const sku = get('sku') || null;
+      const slug = get('slug') || null;
+      const existingBySku = sku
+        ? await productsRepo.findProductBySku(db, sku)
+        : null;
+      const existingBySlug =
+        !existingBySku && slug
+          ? await productsRepo.findProductBySlug(db, slug)
+          : null;
+      const existing = existingBySku ?? existingBySlug;
+
+      const tagsRaw = get('tags');
+      const tags = tagsRaw
+        ? tagsRaw.split('|').map((t) => t.trim()).filter(Boolean)
+        : null;
+      const imagesRaw = get('images');
+      const images = imagesRaw
+        ? imagesRaw.split('|').map((t) => t.trim()).filter(Boolean)
+        : [];
+      const format =
+        get('descriptionFormat') === 'html' ? ('html' as const) : ('plain' as const);
+      const desc = prepareProductDescription(description, format);
+      const stockQty = Math.max(0, Number(get('stockQty') || '0') || 0);
+      const compareAt = get('compareAtPrice');
+      const compareAtPrice =
+        compareAt && Number.isFinite(Number(compareAt))
+          ? Number(compareAt)
+          : null;
+
+      if (existing) {
+        await productsRepo.updateProduct(db, existing.id, {
+          name,
+          categorySlug,
+          basePrice,
+          compareAtPrice,
+          description: desc.description,
+          descriptionFormat: desc.descriptionFormat,
+          tags,
+          images: images.length ? images : existing.images,
+          stockQty,
+          inStock: get('inStock') !== 'false' && stockQty > 0,
+          featured: get('featured') === 'true',
+          status: 'draft',
+          archivedAt: null,
+          sku: sku ?? existing.sku,
+          slug: slug ?? existing.slug,
+        });
+        updated++;
+      } else {
+        const id = `p-${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+        const finalSlug = slug ?? `${slugify(name)}-${id.slice(2, 6)}`;
+        const finalSku = sku ?? `ZAYA-${id.toUpperCase()}`;
+        await assertUniqueSlugSku(db, finalSlug, finalSku);
+        await productsRepo.insertProduct(db, {
+          id,
+          name,
+          categorySlug,
+          basePrice,
+          compareAtPrice,
+          description: desc.description,
+          descriptionFormat: desc.descriptionFormat,
+          images,
+          rating: 0,
+          reviewCount: 0,
+          inStock: stockQty > 0,
+          featured: get('featured') === 'true',
+          tags,
+          createdAt: new Date(),
+          slug: finalSlug,
+          sku: finalSku,
+          status: 'draft',
+          stockQty,
+          reservedQty: 0,
+          seoTitle: null,
+          seoDescription: null,
+          ogImage: null,
+          canonicalUrl: null,
+          archivedAt: null,
+        });
+        created++;
+      }
+    } catch (err) {
+      errors.push({
+        row: r + 1,
+        message: err instanceof Error ? err.message : 'Row failed',
+      });
+    }
+  }
+
+  return { created, updated, errors };
 }
 
 export async function addProductImages(
@@ -363,8 +798,8 @@ export async function addProductImages(
     urls.push(uploaded.url);
   }
   const row = await productsRepo.updateProduct(db, id, { images: urls });
-  const margin = await getProfitMargin(db);
-  return toAdminProduct(row, margin);
+  const pricing = await getPricingSettings(db);
+  return toAdminProduct(row, pricing);
 }
 
 export async function removeProductImage(
@@ -383,8 +818,8 @@ export async function removeProductImage(
   if (key) await deleteUploadObject(key).catch(() => undefined);
 
   const row = await productsRepo.updateProduct(db, id, { images });
-  const margin = await getProfitMargin(db);
-  return toAdminProduct(row, margin);
+  const pricing = await getPricingSettings(db);
+  return toAdminProduct(row, pricing);
 }
 
 export async function listAdminCategories(): Promise<AdminCategoryDTO[]> {

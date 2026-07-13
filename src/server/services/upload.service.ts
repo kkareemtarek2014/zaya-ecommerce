@@ -69,6 +69,48 @@ export async function deleteUploadObject(key: string): Promise<void> {
   await env.UPLOADS.delete(key);
 }
 
+/** Fetch a remote image URL into R2 (Temu import). */
+export async function putRemoteCatalogImage(
+  keyPrefix: string,
+  imageUrl: string,
+): Promise<{ key: string; url: string; size: number; mime: string }> {
+  const res = await fetch(imageUrl, {
+    headers: { accept: 'image/*,*/*' },
+    redirect: 'follow',
+  });
+  if (!res.ok) {
+    throw new ValidationError(`Failed to fetch image (${res.status})`);
+  }
+  const mime = res.headers.get('content-type')?.split(';')[0]?.trim() || 'image/jpeg';
+  if (!mime.startsWith('image/')) {
+    throw new ValidationError('Remote URL is not an image');
+  }
+  const bytes = await res.arrayBuffer();
+  if (bytes.byteLength > MAX_CATALOG_BYTES) {
+    throw new PayloadTooLargeError('Image must be smaller than 5 MB');
+  }
+  const env = await getCloudflareEnv();
+  const id = crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  const ext =
+    mime === 'image/png'
+      ? 'png'
+      : mime === 'image/webp'
+        ? 'webp'
+        : mime === 'image/gif'
+          ? 'gif'
+          : 'jpg';
+  const key = `${keyPrefix}/${id}.${ext}`;
+  await env.UPLOADS.put(key, bytes, {
+    httpMetadata: { contentType: mime },
+  });
+  return {
+    key,
+    url: `/api/media/${key}`,
+    size: bytes.byteLength,
+    mime,
+  };
+}
+
 /** Extract R2 key from `/api/media/...` URL (or raw key). */
 export function mediaUrlToKey(url: string): string | null {
   if (url.startsWith('/api/media/')) {

@@ -1,33 +1,42 @@
 import 'server-only';
-import { and, count, desc, gte, ne, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ne, sql } from 'drizzle-orm';
 import type { AdminStatsDTO } from '@/shared/contracts/admin-stats.contract';
 import { ORDER_STATUS_FLOW } from '@/shared/contracts/admin-ops.contract';
 import type { OrderStatus } from '@/shared/contracts/admin-ops.contract';
 import { getRequestDb } from '@/server/db/request';
-import { orders, products, users } from '@/server/db/schema';
+import {
+  orderItems,
+  orders,
+  products,
+  users,
+} from '@/server/db/schema';
 import * as ordersRepo from '@/server/repositories/orders.repo';
 import { toAdminOrderDTO } from '@/server/services/admin-orders.service';
 import {
   computeSellPrice,
-  getProfitMargin,
+  getPricingSettings,
+  pricingInputFromRow,
+  type PricingSettings,
 } from '@/server/services/pricing.service';
 import {
   findLowStockProducts,
   getLowStockThreshold,
 } from '@/server/services/inventory.service';
+import { listAdminActivity } from '@/server/services/admin-activity.service';
 import { availableQty, isEffectivelyInStock } from '@/server/lib/stock';
 import type { ProductRow } from '@/server/repositories/products.repo';
 import type { AdminProductDTO } from '@/shared/contracts/admin-catalog.contract';
+import { findMostViewed } from '@/server/repositories/product-views.repo';
 
 const ALL_STATUSES: OrderStatus[] = [...ORDER_STATUS_FLOW, 'cancelled'];
 
-function toAdminProduct(row: ProductRow, margin: number): AdminProductDTO {
+function toAdminProduct(row: ProductRow, pricing: PricingSettings): AdminProductDTO {
   const dto: AdminProductDTO = {
     id: row.id,
     name: row.name,
     category: row.categorySlug,
     basePrice: row.basePrice,
-    price: computeSellPrice(row.basePrice, margin),
+    price: computeSellPrice(pricingInputFromRow(row), pricing),
     description: row.description,
     images: row.images ?? [],
     rating: row.rating,
@@ -44,6 +53,8 @@ function toAdminProduct(row: ProductRow, margin: number): AdminProductDTO {
   if (row.tags?.length) dto.tags = row.tags;
   if (row.slug) dto.slug = row.slug;
   if (row.sku) dto.sku = row.sku;
+  if (row.basePriceUsd != null) dto.basePriceUsd = row.basePriceUsd;
+  if (row.landedCost != null) dto.landedCost = row.landedCost;
   return dto;
 }
 
@@ -63,18 +74,68 @@ function last14DayKeys(): string[] {
   return keys;
 }
 
+function startOfUtcDay(d = new Date()): Date {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  );
+}
+
+function startOfUtcMonth(d = new Date()): Date {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+}
+
+function daysAgoUtc(days: number): Date {
+  const now = new Date();
+  return new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - days,
+    ),
+  );
+}
+
 export async function getAdminStats(): Promise<AdminStatsDTO> {
   const db = await getRequestDb();
-  const margin = await getProfitMargin(db);
+  const pricing = await getPricingSettings(db);
 
   const [ordersCountRow] = await db.select({ value: count() }).from(orders);
   const [productsCountRow] = await db.select({ value: count() }).from(products);
   const [usersCountRow] = await db.select({ value: count() }).from(users);
 
+  const nonCancelled = ne(orders.status, 'cancelled');
+
   const [revenueRow] = await db
     .select({ value: sql<number>`coalesce(sum(${orders.total}), 0)` })
     .from(orders)
-    .where(ne(orders.status, 'cancelled'));
+    .where(nonCancelled);
+
+  const todayStart = startOfUtcDay();
+  const [revenueTodayRow] = await db
+    .select({ value: sql<number>`coalesce(sum(${orders.total}), 0)` })
+    .from(orders)
+    .where(and(nonCancelled, gte(orders.createdAt, todayStart)));
+
+  const monthStart = startOfUtcMonth();
+  const [revenueMonthRow] = await db
+    .select({ value: sql<number>`coalesce(sum(${orders.total}), 0)` })
+    .from(orders)
+    .where(and(nonCancelled, gte(orders.createdAt, monthStart)));
+
+  const [avgRow] = await db
+    .select({
+      value: sql<number>`coalesce(avg(${orders.total}), 0)`,
+      n: count(),
+    })
+    .from(orders)
+    .where(nonCancelled);
+  const avgOrderValue =
+    (avgRow?.n ?? 0) > 0 ? Math.round(Number(avgRow?.value ?? 0)) : 0;
+
+  const [newCustomersRow] = await db
+    .select({ value: count() })
+    .from(users)
+    .where(gte(users.createdAt, daysAgoUtc(30)));
 
   const statusRows = await db
     .select({
@@ -99,7 +160,7 @@ export async function getAdminStats(): Promise<AdminStatsDTO> {
       total: sql<number>`coalesce(sum(${orders.total}), 0)`,
     })
     .from(orders)
-    .where(and(ne(orders.status, 'cancelled'), gte(orders.createdAt, start)))
+    .where(and(nonCancelled, gte(orders.createdAt, start)))
     .groupBy(sql`strftime('%Y-%m-%d', ${orders.createdAt} / 1000, 'unixepoch')`);
 
   const salesMap = new Map(
@@ -109,6 +170,35 @@ export async function getAdminStats(): Promise<AdminStatsDTO> {
     date,
     total: salesMap.get(date) ?? 0,
   }));
+
+  const bestSellerRows = await db
+    .select({
+      productId: orderItems.productId,
+      name: sql<string>`max(${orderItems.name})`,
+      image: sql<string | null>`max(${orderItems.image})`,
+      qty: sql<number>`coalesce(sum(${orderItems.quantity}), 0)`,
+      revenue: sql<number>`coalesce(sum(${orderItems.unitPrice} * ${orderItems.quantity}), 0)`,
+    })
+    .from(orderItems)
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(nonCancelled)
+    .groupBy(orderItems.productId)
+    .orderBy(desc(sql`sum(${orderItems.quantity})`))
+    .limit(5);
+
+  const topCategoryRows = await db
+    .select({
+      category: products.categorySlug,
+      qty: sql<number>`coalesce(sum(${orderItems.quantity}), 0)`,
+      revenue: sql<number>`coalesce(sum(${orderItems.unitPrice} * ${orderItems.quantity}), 0)`,
+    })
+    .from(orderItems)
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .innerJoin(products, eq(products.id, orderItems.productId))
+    .where(nonCancelled)
+    .groupBy(products.categorySlug)
+    .orderBy(desc(sql`sum(${orderItems.quantity})`))
+    .limit(5);
 
   const recentOrderRows = await db
     .select()
@@ -130,16 +220,41 @@ export async function getAdminStats(): Promise<AdminStatsDTO> {
 
   const threshold = await getLowStockThreshold(db);
   const lowStockRows = await findLowStockProducts(db, threshold, 8);
+  const recentActivity = await listAdminActivity(8);
+  const mostViewedRows = await findMostViewed(db, 5);
 
   return {
     revenueTotal: Number(revenueRow?.value ?? 0),
+    revenueToday: Number(revenueTodayRow?.value ?? 0),
+    revenueThisMonth: Number(revenueMonthRow?.value ?? 0),
+    avgOrderValue,
     ordersCount: ordersCountRow?.value ?? 0,
     productsCount: productsCountRow?.value ?? 0,
     usersCount: usersCountRow?.value ?? 0,
+    newCustomers: newCustomersRow?.value ?? 0,
     ordersByStatus,
     recentOrders,
-    latestProducts: latestProductRows.map((r) => toAdminProduct(r, margin)),
-    lowStockProducts: lowStockRows.map((r) => toAdminProduct(r, margin)),
+    latestProducts: latestProductRows.map((r) => toAdminProduct(r, pricing)),
+    lowStockProducts: lowStockRows.map((r) => toAdminProduct(r, pricing)),
+    bestSellers: bestSellerRows.map((r) => ({
+      productId: r.productId,
+      name: r.name,
+      ...(r.image ? { image: r.image } : {}),
+      qty: Number(r.qty) || 0,
+      revenue: Number(r.revenue) || 0,
+    })),
+    mostViewed: mostViewedRows.map((r) => ({
+      productId: r.productId,
+      name: r.name,
+      ...(r.image ? { image: r.image } : {}),
+      views: r.views,
+    })),
+    topCategories: topCategoryRows.map((r) => ({
+      category: r.category,
+      qty: Number(r.qty) || 0,
+      revenue: Number(r.revenue) || 0,
+    })),
+    recentActivity,
     salesByDay,
   };
 }

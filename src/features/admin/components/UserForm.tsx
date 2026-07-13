@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input, Select } from '@/shared/components/ui';
 import type { AdminUserDTO } from '@/shared/contracts/admin-ops.contract';
+import { ROLE_LABELS, USER_ROLES, type UserRole } from '@/shared/rbac';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 
 const egyptianPhone = /^01[0125][0-9]{8}$/;
 
@@ -16,7 +18,7 @@ const formSchema = z.object({
     .refine((v) => v === '' || egyptianPhone.test(v), {
       message: 'Enter a valid Egyptian mobile number',
     }),
-  role: z.enum(['customer', 'admin']),
+  role: z.enum(USER_ROLES),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -24,7 +26,7 @@ type FormValues = z.infer<typeof formSchema>;
 export interface UserFormSubmit {
   name: string;
   phone: string | null;
-  role: 'customer' | 'admin';
+  role: UserRole;
 }
 
 interface UserFormProps {
@@ -41,6 +43,9 @@ export function UserForm({
   isLoading,
   lockRole,
 }: UserFormProps) {
+  const me = useAuthStore((s) => s.user);
+  const canAssignAdmin = me?.role === 'admin';
+
   const {
     register,
     handleSubmit,
@@ -52,6 +57,11 @@ export function UserForm({
       phone: initial.phone ?? '',
       role: initial.role,
     },
+  });
+
+  const roleOptions = USER_ROLES.filter((role) => {
+    if (role === 'admin') return canAssignAdmin || initial.role === 'admin';
+    return true;
   });
 
   return (
@@ -80,8 +90,11 @@ export function UserForm({
         disabled={lockRole}
         {...register('role')}
       >
-        <option value="customer">Customer</option>
-        <option value="admin">Admin</option>
+        {roleOptions.map((role) => (
+          <option key={role} value={role}>
+            {ROLE_LABELS[role]}
+          </option>
+        ))}
       </Select>
       {lockRole ? (
         <p className="text-xs text-text-muted">

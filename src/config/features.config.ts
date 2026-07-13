@@ -10,7 +10,14 @@ export type FeatureKey =
   | 'auth'
   | 'wallet'
   | 'promo_code'
-  | 'order_note';
+  | 'order_note'
+  | 'homepage_builder'
+  | 'dynamic_pricing'
+  | 'bundles'
+  | 'preorders'
+  | 'social_proof'
+  | 'online_payments'
+  | 'bosta_shipping';
 
 export interface FeatureConfig {
   key: FeatureKey;
@@ -32,6 +39,42 @@ export const FEATURES: Record<FeatureKey, FeatureConfig> = {
   wallet: { key: 'wallet', label: 'Wallet', enabled: false, routes: ['/account/wallet'] },
   promo_code: { key: 'promo_code', label: 'Promo Code', enabled: true },
   order_note: { key: 'order_note', label: 'Order Note', enabled: true },
+  homepage_builder: {
+    key: 'homepage_builder',
+    label: 'Homepage Builder',
+    enabled: true,
+    routes: ['/admin/homepage'],
+  },
+  dynamic_pricing: {
+    key: 'dynamic_pricing',
+    label: 'Dynamic Pricing (landed cost)',
+    enabled: false,
+  },
+  bundles: {
+    key: 'bundles',
+    label: 'Bundles & upselling',
+    enabled: false,
+  },
+  preorders: {
+    key: 'preorders',
+    label: 'Pre-orders',
+    enabled: false,
+  },
+  social_proof: {
+    key: 'social_proof',
+    label: 'Social proof (Instagram)',
+    enabled: false,
+  },
+  online_payments: {
+    key: 'online_payments',
+    label: 'Online payments (Paymob card/wallet)',
+    enabled: false,
+  },
+  bosta_shipping: {
+    key: 'bosta_shipping',
+    label: 'Bosta shipping',
+    enabled: false,
+  },
 };
 
 export function isFeatureEnabled(key: FeatureKey): boolean {

@@ -183,22 +183,22 @@ uses the existing Tailwind v4 tokens / mobile-first design.
 
 ## 8. Task checklist
 **Pricing (P24)**
-- [ ] `settings`: `usd_egp_rate, bulk_shipping_usd, customs_duty_rate, vat_rate, handling_fee_egp, target_margin, price_rounding_egp`; `fx_rates` table.
-- [ ] `products`: `base_price_usd`, `landed_cost`; refactor `getSellPrice`→`computeSellPrice(product,settings)` (single authority, server-only cost inputs).
-- [ ] `fx-rate-refresh` (daily) + `landed-cost-reprice` (on change) cron; `dynamic_pricing` flag; migrate/re-price at cutover.
-- [ ] [V] formula matches §1.2 for a sample item; rate change re-prices; flag OFF keeps old prices; no cost inputs in any API response.
+- [x] `settings`: `usd_egp_rate, bulk_shipping_usd, customs_duty_rate, vat_rate, handling_fee_egp, target_margin, price_rounding_egp`; `fx_rates` table.
+- [x] `products`: `base_price_usd`, `landed_cost`; refactor `getSellPrice`→`computeSellPrice(product,settings)` (single authority, server-only cost inputs).
+- [x] `fx-rate-refresh` (daily) + `landed-cost-reprice` (on change) cron; `dynamic_pricing` flag; migrate/re-price at cutover.
+- [x] [V] formula matches §1.2 for a sample item; rate change re-prices; flag OFF keeps old prices; no cost inputs in any API response.
 
 **Importer + sync (P25)**
-- [ ] `SCRAPER_API_KEY`; `temu-import.service` (provider-abstracted) + `POST /api/admin/import/temu` → draft product.
-- [ ] `products`: `source_provider, source_url, source_product_id, source_variant_map, source_in_stock, last_synced_at`; images→R2; description→rich text.
-- [ ] `temu-stock-sync` cron (config cadence/batch); writes `inventory_movements` + notifications.
-- [ ] [V] URL import creates review-ready draft; source-OOS → `stock_qty=0`; rate-limited + audit-logged; no auto-publish.
+- [x] `SCRAPER_API_KEY`; `temu-import.service` (provider-abstracted) + `POST /api/admin/import/temu` → draft product.
+- [x] `products`: `source_provider, source_url, source_product_id, source_variant_map, source_in_stock, last_synced_at`; images→R2; description→rich text.
+- [x] `temu-stock-sync` cron (config cadence/batch); writes `inventory_movements` + notifications.
+- [x] [V] URL import creates review-ready draft; source-OOS → `stock_qty=0`; rate-limited + audit-logged; no auto-publish.
 
 **Merchandising (P26)**
-- [ ] `bundles` + `bundle_items`; server bundle evaluation in cart/checkout; admin Bundles CRUD + scheduling.
-- [ ] Pre-order: `preorder_enabled`/`preorder_eta_days`, `order_items.is_preorder`, labelled checkout + ETA; admin pre-order list.
-- [ ] Shipping-timeline UI from `fulfilment_type` + settings; Instagram/social-proof section (flag); localized-description workflow.
-- [ ] [V] Buy-2-Get-1 applied server-side; pre-order gated (enabled + OOS) with correct ETA; timelines correct per type; each behind a flag.
+- [x] `bundles` + `bundle_items`; server bundle evaluation in cart/checkout; admin Bundles CRUD + scheduling.
+- [x] Pre-order: `preorder_enabled`/`preorder_eta_days`, `order_items.is_preorder`, labelled checkout + ETA; admin pre-order list.
+- [x] Shipping-timeline UI from `fulfilment_type` + settings; Instagram/social-proof section (flag); localized-description workflow.
+- [x] [V] Buy-2-Get-1 applied server-side; pre-order gated (enabled + OOS) with correct ETA; timelines correct per type; each behind a flag.
 
 **Fulfilment/compliance**
 - [ ] `fulfilment_type` on products drives stock + timeline; checkout never orders from Temu (Bosta only).

@@ -7,5 +7,6 @@ export const promos = sqliteTable('promos', {
   }).notNull(),
   value: real('value').notNull(),
   minOrderValue: integer('min_order_value'),
+  maxRedemptions: integer('max_redemptions'),
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
 });

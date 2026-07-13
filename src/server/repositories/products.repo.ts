@@ -162,7 +162,11 @@ export async function findProductsAdmin(
   if (filters.q?.trim()) {
     const q = `%${filters.q.trim().toLowerCase()}%`;
     conditions.push(
-      sql`(lower(${products.name}) like ${q} or lower(${products.categorySlug}) like ${q} or lower(coalesce(${products.tags}, '')) like ${q})`,
+      sql`(lower(${products.name}) like ${q}
+        or lower(${products.categorySlug}) like ${q}
+        or lower(coalesce(${products.sku}, '')) like ${q}
+        or lower(coalesce(${products.tags}, '')) like ${q}
+        or lower(${products.description}) like ${q})`,
     );
   }
 
@@ -209,6 +213,48 @@ export async function updateProduct(
   const updated = await findProductByIdAny(db, id);
   if (!updated) throw new Error('Product not found after update');
   return updated;
+}
+
+/**
+ * Atomically reserve `qty` units. Single conditional UPDATE so concurrent
+ * checkouts can't oversell. Returns true only if the reservation was applied
+ * (product published, in stock, enough available).
+ */
+export async function reserveProductStock(
+  db: Db,
+  id: string,
+  qty: number,
+): Promise<boolean> {
+  const res = (await db.run(sql`
+    UPDATE products
+    SET reserved_qty = reserved_qty + ${qty},
+        in_stock = CASE
+          WHEN (stock_qty - (reserved_qty + ${qty})) > 0 THEN in_stock
+          ELSE 0
+        END
+    WHERE id = ${id}
+      AND in_stock = 1
+      AND status = 'published'
+      AND (stock_qty - reserved_qty) >= ${qty}
+  `)) as { meta?: { changes?: number } };
+  return (res.meta?.changes ?? 0) > 0;
+}
+
+/** Atomically release `qty` reserved units (never below zero); re-enable stock if available. */
+export async function releaseProductStock(
+  db: Db,
+  id: string,
+  qty: number,
+): Promise<void> {
+  await db.run(sql`
+    UPDATE products
+    SET reserved_qty = MAX(0, reserved_qty - ${qty}),
+        in_stock = CASE
+          WHEN (stock_qty - MAX(0, reserved_qty - ${qty})) > 0 THEN 1
+          ELSE in_stock
+        END
+    WHERE id = ${id}
+  `);
 }
 
 export async function deleteProduct(db: Db, id: string): Promise<boolean> {

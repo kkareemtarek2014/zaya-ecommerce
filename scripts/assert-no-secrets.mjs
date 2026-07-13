@@ -59,9 +59,13 @@ const productService = fs.readFileSync(
   path.join(root, 'src/server/services/product.service.ts'),
   'utf8',
 );
-if (!/computeSellPrice\(row\.basePrice(?:,\s*\w+)?\)/.test(productService)) {
+if (
+  !/computeSellPrice\(pricingInputFromRow\(row\),\s*pricing\)/.test(
+    productService,
+  )
+) {
   fail(
-    'product mapper should derive price from row.basePrice via computeSellPrice',
+    'product mapper should derive price via computeSellPrice(pricingInputFromRow(row), pricing)',
   );
 }
 {
@@ -71,7 +75,23 @@ if (!/computeSellPrice\(row\.basePrice(?:,\s*\w+)?\)/.test(productService)) {
   if (/[{,]\s*basePrice\s*:/.test(withoutComments)) {
     fail('storefront product service serializes basePrice as an object key');
   }
+  if (/[{,]\s*basePriceUsd\s*:/.test(withoutComments)) {
+    fail('storefront product service serializes basePriceUsd');
+  }
+  if (/[{,]\s*landedCost\s*:/.test(withoutComments)) {
+    fail('storefront product service serializes landedCost');
+  }
 }
+
+const clientCost = rg('basePriceUsd|landedCost|landed_cost|base_price_usd', [
+  'src/features/**/*.{ts,tsx}',
+  '!src/features/admin/**',
+  'src/shared/components/**/*.{ts,tsx}',
+  'src/shared/contracts/**/*.ts',
+  '!src/shared/contracts/admin-*.ts',
+  'src/shared/lib/**/*.ts',
+]);
+if (clientCost) fail('cost inputs in storefront client/contracts', clientCost);
 
 const requireAuth = fs.readFileSync(
   path.join(root, 'src/server/auth/require-auth.ts'),

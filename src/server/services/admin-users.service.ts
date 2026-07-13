@@ -1,4 +1,5 @@
 import 'server-only';
+import { inArray } from 'drizzle-orm';
 import {
   adminUserWriteSchema,
   type AdminOrderDTO,
@@ -7,17 +8,22 @@ import {
 } from '@/shared/contracts/admin-ops.contract';
 import type { Paginated } from '@/shared/contracts/admin-catalog.contract';
 import { getRequestDb } from '@/server/db/request';
+import { products } from '@/server/db/schema';
 import {
   ConflictError,
+  ForbiddenError,
   NotFoundError,
   ValidationError,
 } from '@/server/http/errors';
 import * as usersRepo from '@/server/repositories/users.repo';
 import * as ordersRepo from '@/server/repositories/orders.repo';
+import * as favoritesRepo from '@/server/repositories/favorites.repo';
+import * as addressesRepo from '@/server/repositories/addresses.repo';
 import type { UserRow } from '@/server/repositories/users.repo';
 import { toAdminOrderDTO } from '@/server/services/admin-orders.service';
 import { ok } from '@/server/http/envelope';
 import { writeAuditLog } from '@/server/services/audit.service';
+import { isUserRole } from '@/shared/rbac';
 
 function toAdminUserDTO(row: UserRow, ordersCount: number): AdminUserDTO {
   return {
@@ -37,9 +43,11 @@ export async function listAdminUsers(url: URL) {
   const pageSize = Number(url.searchParams.get('pageSize') ?? '20') || 20;
   const q = url.searchParams.get('q') ?? undefined;
   const roleRaw = url.searchParams.get('role');
-  let role: 'customer' | 'admin' | undefined;
-  if (roleRaw === 'customer' || roleRaw === 'admin') role = roleRaw;
-  else if (roleRaw) throw new ValidationError('Invalid role filter');
+  let role: usersRepo.AdminUserListFilters['role'];
+  if (roleRaw) {
+    if (!isUserRole(roleRaw)) throw new ValidationError('Invalid role filter');
+    role = roleRaw;
+  }
 
   const { rows, total, page: p, pageSize: ps } = await usersRepo.listAdminUsers(
     db,
@@ -61,15 +69,49 @@ export async function getAdminUser(id: string): Promise<AdminUserDetailDTO> {
   const user = await usersRepo.findUserById(db, id);
   if (!user) throw new NotFoundError('User not found');
 
-  const ordersCount = await ordersRepo.countOrdersByUserId(db, id);
+  const statsRaw = await ordersRepo.getUserOrderStats(db, id);
   const recent = await ordersRepo.findOrdersByUserId(db, id, 10);
   const recentOrders: AdminOrderDTO[] = recent.map(({ order, items }) =>
     toAdminOrderDTO(order, items),
   );
 
+  const favoriteIds = await favoritesRepo.listFavoriteProductIds(db, id);
+  const favoriteProducts =
+    favoriteIds.length > 0
+      ? await db
+          .select({
+            id: products.id,
+            name: products.name,
+            images: products.images,
+          })
+          .from(products)
+          .where(inArray(products.id, favoriteIds))
+      : [];
+
+  const addressRows = await addressesRepo.listAddressesByUser(db, id);
+
   return {
-    ...toAdminUserDTO(user, ordersCount),
+    ...toAdminUserDTO(user, statsRaw.ordersCount),
+    stats: {
+      ordersCount: statsRaw.ordersCount,
+      totalSpent: statsRaw.totalSpent,
+      lastOrderAt: statsRaw.lastOrderAt
+        ? statsRaw.lastOrderAt.toISOString()
+        : null,
+    },
     recentOrders,
+    favorites: favoriteProducts.map((p) => ({
+      id: p.id,
+      name: p.name,
+      ...(p.images?.[0] ? { image: p.images[0] } : {}),
+    })),
+    addresses: addressRows.map((a) => ({
+      id: a.id,
+      label: a.label,
+      governorate: a.governorateId,
+      city: a.city,
+      street: a.street,
+    })),
   };
 }
 
@@ -90,12 +132,18 @@ export async function updateAdminUser(
   const existing = await usersRepo.findUserById(db, id);
   if (!existing) throw new NotFoundError('User not found');
 
+  const actor = await usersRepo.findUserById(db, actorId);
+  if (!actor) throw new ForbiddenError('Actor not found');
+
   const nextRole = parsed.data.role;
   if (nextRole !== undefined && nextRole !== existing.role) {
-    if (id === actorId && nextRole === 'customer') {
-      throw new ConflictError('You cannot demote your own admin account');
+    if (id === actorId) {
+      throw new ConflictError('You cannot change your own role');
     }
-    if (existing.role === 'admin' && nextRole === 'customer') {
+    if (nextRole === 'admin' && actor.role !== 'admin') {
+      throw new ForbiddenError('Only admins can assign the admin role');
+    }
+    if (existing.role === 'admin' && nextRole !== 'admin') {
       const admins = await usersRepo.countAdmins(db);
       if (admins <= 1) {
         throw new ConflictError('Cannot demote the last admin');

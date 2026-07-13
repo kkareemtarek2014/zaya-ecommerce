@@ -42,6 +42,7 @@ export default function AdminOrdersPage() {
   const [qDraft, setQDraft] = useState('');
   const [status, setStatus] = useState('');
   const [governorate, setGovernorate] = useState('');
+  const [preorderOnly, setPreorderOnly] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -50,8 +51,9 @@ export default function AdminOrdersPage() {
       q: q || undefined,
       status: parseStatusFilter(status),
       governorate: governorate || undefined,
+      preorder: preorderOnly || undefined,
     }),
-    [page, q, status, governorate],
+    [page, q, status, governorate, preorderOnly],
   );
 
   const { data, isLoading, isError } = useAdminOrders(params);
@@ -86,7 +88,14 @@ export default function AdminOrdersPage() {
     {
       key: 'status',
       header: 'Status',
-      cell: (row) => ORDER_STATUS_LABELS[row.status],
+      cell: (row) => (
+        <div>
+          <p>{ORDER_STATUS_LABELS[row.status]}</p>
+          {row.items.some((i) => i.isPreorder) ? (
+            <p className="text-xs text-brand-accent">Pre-order</p>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: 'total',
@@ -177,6 +186,17 @@ export default function AdminOrdersPage() {
             </option>
           ))}
         </Select>
+        <label className="flex items-center gap-2 pb-2 text-sm text-text-secondary">
+          <input
+            type="checkbox"
+            checked={preorderOnly}
+            onChange={(e) => {
+              setPage(1);
+              setPreorderOnly(e.target.checked);
+            }}
+          />
+          Pre-orders only
+        </label>
         <Button
           type="button"
           variant="outline"

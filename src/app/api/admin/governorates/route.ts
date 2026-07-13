@@ -1,15 +1,15 @@
 import { withHandler } from '@/server/http/handler';
-import { requireAdmin } from '@/server/auth/require-admin';
+import { requirePermission } from '@/server/auth/require-admin';
 import * as locations from '@/server/services/admin-locations.service';
 import { writeAuditLog } from '@/server/services/audit.service';
 
 export const GET = withHandler(async (request) => {
-  await requireAdmin(request);
+  await requirePermission(request, 'locations:write');
   return locations.listAdminGovernorates();
 });
 
 export const POST = withHandler(async (request) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'locations:write');
   const body: unknown = await request.json();
   const governorate = await locations.createAdminGovernorate(body);
   await writeAuditLog({

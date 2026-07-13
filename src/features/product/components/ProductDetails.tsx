@@ -6,6 +6,7 @@ import { Check, ShieldCheck, Star, Truck } from 'lucide-react';
 import { useProduct } from '@/features/shop';
 import { useCartStore } from '@/features/cart';
 import { formatEGP } from '@/shared/utils/price';
+import { sanitizeProductHtml } from '@/shared/lib/sanitize-html';
 import { FREE_SHIPPING_THRESHOLD } from '@/config/site.config';
 import { useStorefrontConfig } from '@/features/admin';
 import {
@@ -20,6 +21,7 @@ import { ProductReviews } from './ProductReviews';
 import { RelatedProducts } from './RelatedProducts';
 import { NewArrivals } from './NewArrivals';
 import { RecentlyViewed } from './RecentlyViewed';
+import { ProductBundleHints } from './ProductBundleHints';
 
 export function ProductDetails({ id }: { id: string }) {
   const { data: product, isLoading } = useProduct(id);
@@ -36,6 +38,12 @@ export function ProductDetails({ id }: { id: string }) {
       addViewedProduct(product);
     }
   }, [product, addViewedProduct]);
+
+  useEffect(() => {
+    void fetch(`/api/products/${encodeURIComponent(id)}/view`, {
+      method: 'POST',
+    }).catch(() => undefined);
+  }, [id]);
 
   if (isLoading) {
     return (
@@ -65,6 +73,7 @@ export function ProductDetails({ id }: { id: string }) {
   }
 
   const price = product.price;
+  const canAdd = product.inStock || Boolean(product.preorderAvailable);
 
   const handleAdd = () => {
     addItem(product, quantity);
@@ -83,6 +92,9 @@ export function ProductDetails({ id }: { id: string }) {
               <Badge tone="accent">Best Seller</Badge>
             )}
             {product.compareAtPrice && <Badge tone="error">Sale</Badge>}
+            {product.preorderAvailable ? (
+              <Badge tone="accent">Pre-order</Badge>
+            ) : null}
           </div>
 
           <h1 className="font-(family-name:--font-display) text-3xl font-semibold leading-tight lg:text-4xl">
@@ -110,22 +122,42 @@ export function ProductDetails({ id }: { id: string }) {
             )}
           </div>
 
-          <p className="leading-relaxed text-text-secondary">
-            {product.description}
-          </p>
+          {product.descriptionFormat === 'html' ? (
+            <div
+              className="prose-product leading-relaxed text-text-secondary [&_a]:text-brand-primary [&_a]:underline [&_li]:ml-4 [&_ol]:list-decimal [&_ul]:list-disc"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeProductHtml(product.description),
+              }}
+            />
+          ) : (
+            <p className="leading-relaxed text-text-secondary">
+              {product.description}
+            </p>
+          )}
+
+          {product.shippingEta ? (
+            <p className="flex items-center gap-2 text-sm text-text-secondary">
+              <Truck className="size-4 shrink-0 text-brand-primary" />
+              {product.shippingEta.startsWith('Ships')
+                ? product.shippingEta
+                : `Ships in ${product.shippingEta}`}
+            </p>
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <QuantityStepper value={quantity} onChange={setQuantity} />
             <Button
               size="lg"
               onClick={handleAdd}
-              disabled={!product.inStock}
+              disabled={!canAdd}
               className="flex-1 sm:min-w-56 sm:flex-none"
             >
               {added ? (
                 <>
                   <Check className="size-5" /> Added to bag
                 </>
+              ) : product.preorderAvailable && !product.inStock ? (
+                'Pre-order'
               ) : product.inStock ? (
                 'Add to bag'
               ) : (
@@ -138,6 +170,18 @@ export function ProductDetails({ id }: { id: string }) {
               className="size-11 border border-border-strong shadow-none hover:border-brand-primary"
             />
           </div>
+
+          {product.preorderAvailable && !product.inStock ? (
+            <p className="text-xs text-text-muted">
+              This item is on pre-order
+              {product.preorderEtaDays
+                ? ` · expected in about ${product.preorderEtaDays} days`
+                : ''}
+              .
+            </p>
+          ) : null}
+
+          <ProductBundleHints productId={product.id} />
 
           <ul className="mt-4 space-y-3 rounded-(--radius-lg) bg-brand-blush/60 p-5 text-sm text-text-secondary">
             <li className="flex items-center gap-3">

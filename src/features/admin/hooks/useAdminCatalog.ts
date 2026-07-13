@@ -82,6 +82,26 @@ export function useRestoreAdminProduct() {
   });
 }
 
+export function useDuplicateAdminProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => adminCatalogService.duplicateProduct(id),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'products'] });
+    },
+  });
+}
+
+export function useBulkAdminProducts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: adminCatalogService.bulkProducts,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'products'] });
+    },
+  });
+}
+
 export function useCreateAdminCategory() {
   const qc = useQueryClient();
   return useMutation({

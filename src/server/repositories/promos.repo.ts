@@ -41,6 +41,7 @@ export async function insertPromo(
     type: PromoRow['type'];
     value: number;
     minOrderValue?: number | null;
+    maxRedemptions?: number | null;
     active?: boolean;
   },
 ): Promise<PromoRow> {
@@ -49,6 +50,7 @@ export async function insertPromo(
     type: input.type,
     value: input.value,
     minOrderValue: input.minOrderValue ?? null,
+    maxRedemptions: input.maxRedemptions ?? null,
     active: input.active ?? true,
   });
   const row = await findPromoByCode(db, input.code);
@@ -63,6 +65,7 @@ export async function updatePromo(
     type?: PromoRow['type'];
     value?: number;
     minOrderValue?: number | null;
+    maxRedemptions?: number | null;
     active?: boolean;
   },
 ): Promise<PromoRow | null> {
@@ -70,6 +73,8 @@ export async function updatePromo(
   if (input.type !== undefined) patch.type = input.type;
   if (input.value !== undefined) patch.value = input.value;
   if (input.minOrderValue !== undefined) patch.minOrderValue = input.minOrderValue;
+  if (input.maxRedemptions !== undefined)
+    patch.maxRedemptions = input.maxRedemptions;
   if (input.active !== undefined) patch.active = input.active;
   if (Object.keys(patch).length === 0) return findPromoByCode(db, code);
   await db

@@ -1,15 +1,15 @@
 import { withHandler } from '@/server/http/handler';
-import { requireAdmin } from '@/server/auth/require-admin';
+import { requirePermission } from '@/server/auth/require-admin';
 import * as promos from '@/server/services/admin-promos.service';
 import { writeAuditLog } from '@/server/services/audit.service';
 
 export const GET = withHandler(async (request) => {
-  await requireAdmin(request);
+  await requirePermission(request, 'promos:write');
   return promos.listAdminPromos();
 });
 
 export const POST = withHandler(async (request) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'promos:write');
   const body: unknown = await request.json();
   const promo = await promos.createAdminPromo(body);
   await writeAuditLog({

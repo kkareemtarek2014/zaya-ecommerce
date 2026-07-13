@@ -19,6 +19,7 @@ export const inventoryMovements = sqliteTable('inventory_movements', {
       'return',
       'reservation',
       'release',
+      'sync',
     ],
   }).notNull(),
   orderId: text('order_id').references(() => orders.id),

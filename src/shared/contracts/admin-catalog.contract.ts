@@ -16,6 +16,18 @@ export const adminProductDtoSchema = z.object({
   basePrice: z.number().int(),
   price: z.number().int(),
   compareAtPrice: z.number().int().optional(),
+  /** USD source cost — admin only (P24). */
+  basePriceUsd: z.number().positive().optional(),
+  /** Landed-cost snapshot EGP — admin only (P24). */
+  landedCost: z.number().int().optional(),
+  sourceProvider: z.string().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
+  sourceProductId: z.string().nullable().optional(),
+  sourceInStock: z.boolean().nullable().optional(),
+  lastSyncedAt: z.string().nullable().optional(),
+  fulfilmentType: z.enum(['local_stock', 'dropship']).optional(),
+  preorderEnabled: z.boolean().optional(),
+  preorderEtaDays: z.number().int().nullable().optional(),
   description: z.string(),
   images: z.array(z.string()),
   rating: z.number(),
@@ -45,6 +57,10 @@ export const adminProductWriteSchema = z.object({
   categorySlug: z.string().min(1),
   basePrice: z.number().int().positive(),
   compareAtPrice: z.number().int().positive().optional().nullable(),
+  basePriceUsd: z.number().positive().optional().nullable(),
+  fulfilmentType: z.enum(['local_stock', 'dropship']).optional(),
+  preorderEnabled: z.boolean().optional(),
+  preorderEtaDays: z.number().int().min(1).max(120).optional().nullable(),
   description: z.string().trim().min(10),
   images: z.array(z.string()).default([]),
   inStock: z.boolean().default(true),
@@ -64,9 +80,61 @@ export const adminProductWriteSchema = z.object({
   seoDescription: z.string().trim().optional().nullable(),
   ogImage: z.string().trim().optional().nullable(),
   canonicalUrl: z.string().trim().optional().nullable(),
+  descriptionFormat: z.enum(['plain', 'html']).optional(),
 });
 
 export type AdminProductWrite = z.infer<typeof adminProductWriteSchema>;
+
+export const adminProductBulkSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
+  action: z.enum(['archive', 'publish', 'hide', 'set-category']),
+  payload: z
+    .object({
+      categorySlug: z.string().min(1).optional(),
+    })
+    .optional(),
+});
+
+export type AdminProductBulk = z.infer<typeof adminProductBulkSchema>;
+
+export const adminProductBulkResultSchema = z.object({
+  results: z.array(
+    z.object({
+      id: z.string(),
+      ok: z.boolean(),
+      error: z.string().optional(),
+    }),
+  ),
+});
+
+export type AdminProductBulkResult = z.infer<typeof adminProductBulkResultSchema>;
+
+export const adminCsvImportReportSchema = z.object({
+  created: z.number().int(),
+  updated: z.number().int(),
+  errors: z.array(
+    z.object({
+      row: z.number().int(),
+      message: z.string(),
+    }),
+  ),
+});
+
+export type AdminCsvImportReport = z.infer<typeof adminCsvImportReportSchema>;
+
+export const adminMediaDtoSchema = z.object({
+  id: z.string(),
+  url: z.string(),
+  filename: z.string(),
+  mime: z.string(),
+  size: z.number().int(),
+  alt: z.string().nullable().optional(),
+  folder: z.string().nullable().optional(),
+  uploadedBy: z.string(),
+  createdAt: z.string(),
+});
+
+export type AdminMediaDTO = z.infer<typeof adminMediaDtoSchema>;
 
 export const adminCategoryDtoSchema = z.object({
   slug: z.string(),

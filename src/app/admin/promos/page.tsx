@@ -68,6 +68,16 @@ export default function AdminPromosPage() {
         row.minOrderValue != null ? formatEGP(row.minOrderValue) : '—',
     },
     {
+      key: 'usage',
+      header: 'Usage',
+      cell: (row) => (
+        <span className="text-xs text-text-muted">
+          {row.timesUsed ?? 0} used
+          {row.remaining != null ? ` · ${row.remaining} left` : ''}
+        </span>
+      ),
+    },
+    {
       key: 'active',
       header: 'Active',
       cell: (row) => (
@@ -132,6 +142,7 @@ export default function AdminPromosPage() {
       type: values.type,
       value: values.value,
       minOrderValue: values.minOrderValue,
+      maxRedemptions: values.maxRedemptions,
       active: values.active,
     });
     toast('Promo created', 'success');
@@ -146,6 +157,7 @@ export default function AdminPromosPage() {
         type: values.type,
         value: values.value,
         minOrderValue: values.minOrderValue,
+        maxRedemptions: values.maxRedemptions,
         active: values.active,
       },
     });

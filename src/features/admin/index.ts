@@ -10,18 +10,27 @@ export { ProductForm } from './components/ProductForm';
 export { StockPanel } from './components/StockPanel';
 export { CategoryForm } from './components/CategoryForm';
 export { ImageUploader } from './components/ImageUploader';
+export { MediaPicker } from './components/MediaPicker';
 export {
   OrderStatusSelect,
   ORDER_STATUS_LABELS,
 } from './components/OrderStatusSelect';
 export { UserForm } from './components/UserForm';
 export { SettingsForm } from './components/SettingsForm';
+export { CronJobsPanel } from './components/CronJobsPanel';
+export { IntegrationsStatusPanel } from './components/IntegrationsStatusPanel';
+export { TemuScraperToggle } from './components/TemuScraperToggle';
 export { PromoForm, type PromoFormSubmit } from './components/PromoForm';
+export { BundleForm, type BundleFormSubmit } from './components/BundleForm';
+export { HomepageBuilder } from './components/HomepageBuilder';
+export { HomepageBlockForm } from './components/HomepageBlockForm';
 export { StatCard } from './components/StatCard';
 export { SalesChart } from './components/SalesChart';
 export { RecentOrders } from './components/RecentOrders';
 export { LatestProducts } from './components/LatestProducts';
 export { DashboardView } from './components/DashboardView';
+export { NotificationBell } from './components/NotificationBell';
+export { ActivityFeed } from './components/ActivityFeed';
 export {
   useAdminProducts,
   useAdminProduct,
@@ -30,6 +39,8 @@ export {
   useUpdateAdminProduct,
   useDeleteAdminProduct,
   useRestoreAdminProduct,
+  useDuplicateAdminProduct,
+  useBulkAdminProducts,
   useCreateAdminCategory,
   useUpdateAdminCategory,
   useDeleteAdminCategory,
@@ -51,6 +62,7 @@ export {
   adminOrdersService,
   adminStatsService,
   adminUsersService,
+  adminOpsService,
 } from './services/admin-ops.service';
 export {
   storefrontConfigService,
@@ -80,3 +92,29 @@ export {
   useUpdateAdminSettings,
   adminConfigKeys,
 } from './hooks/useAdminConfig';
+export {
+  useAdminBundles,
+  useCreateBundle,
+  useUpdateBundle,
+  useToggleBundle,
+  useDeleteBundle,
+  adminBundlesKeys,
+} from './hooks/useAdminBundles';
+export { adminBundlesService } from './services/admin-bundles.service';
+export {
+  useAdminShipments,
+  useAdminOrderShipment,
+  useCreateAdminShipment,
+  useRefreshAdminShipment,
+  adminShipmentsKeys,
+} from './hooks/useAdminShipments';
+export { adminShipmentsService } from './services/admin-shipments.service';
+export {
+  useAdminHomepageBlocks,
+  useCreateHomepageBlock,
+  useUpdateHomepageBlock,
+  useDeleteHomepageBlock,
+  useReorderHomepageBlocks,
+  adminHomepageKeys,
+} from './hooks/useAdminHomepage';
+export { adminHomepageService } from './services/admin-homepage.service';

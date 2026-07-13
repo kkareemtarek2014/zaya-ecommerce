@@ -25,21 +25,16 @@ R2), add an admin dashboard, and integrate Bosta + Paymob lives in **`docs/backe
 | Shipping nearby governorates | 80 EGP | `SHIPPING_RATES.near` |
 | Shipping far (Upper Egypt/Sinai) | 100 EGP | `SHIPPING_RATES.far` |
 | Free shipping | orders ≥ 1,500 EGP | `FREE_SHIPPING_THRESHOLD` |
-| Payment | Cash on delivery today; **Paymob** (card + mobile wallet) planned | checkout feature |
-| Fulfilment | Manual today; **Bosta** delivery (COD collection + tracking) planned | orders feature |
+| Payment | Cash on delivery today; **Paymob** (card + mobile wallet, flag) | checkout feature |
+| Fulfilment | Manual today; **Bosta** (flag `bosta_shipping`; P15 go-live hardening) | orders feature |
 | Domain (placeholder) | `SITE.url` — update when real domain bought | |
 
-**Pricing model (current):** products store `basePrice` (sourcing cost in EGP). Customer price =
-server `computeSellPrice(db, basePrice)` — effective `profit_margin` from `settings` (fallback
-`PROFIT_MARGIN`), rounded UP to nearest 5 EGP via `getSellPrice(base, margin)`. Never hardcode selling
-prices. `basePrice` is a secret sourcing cost and must **never** be sent to the browser (only admin
-sees it).
-
-**Pricing model (target — `docs/backend/11`):** a server-side **landed-cost engine** replaces the flat
-margin when the `dynamic_pricing` flag is ON — Temu USD base × live USD/EGP rate + ~$2 bulk shipping +
-10.5% customs (Gamarek) + 14% VAT + ~100 EGP handling → **50% margin on landed cost**, rounded to 5 EGP.
-`computeSellPrice` remains the single price authority. All rates are settings-driven and **must be
-verified** against current regulations; all cost inputs stay server-only.
+**Pricing model:** products store `basePrice` (EGP cost) and optional `basePriceUsd` /
+`landedCost` (server-only). Customer price = `computeSellPrice(product, settings)` —
+flag `dynamic_pricing` OFF (default) → flat EGP cost × `(1+profit_margin)`, rounded up to 5 EGP;
+ON + USD base → landed-cost engine (`11` §1.2: FX + shipping + customs + VAT + handling → target
+margin). Never hardcode sell prices; cost inputs never go to the storefront. Rates are settings-
+driven and **must be verified** against current regulations before go-live.
 
 **Governorate → zone mapping:** D1 `governorates` (admin-editable in P11). Shipping =
 server `getShippingCost` (zone fees + free threshold from DB). Checkout/cart **preview** uses
@@ -76,7 +71,8 @@ server `getShippingCost` (zone fees + free threshold from DB). Checkout/cart **p
 8. **Animations are CSS-only** — utilities `animate-fade-up`, `animate-pop`, `stagger` in `globals.css`.
    No animation libraries. Respect `prefers-reduced-motion` (already handled globally).
 9. **Feature flags** — `src/config/features.config.ts` drives `middleware.ts` (disabled routes → 404) and
-   `FeatureContext`. Respect flags (e.g. `wallet` is currently OFF).
+   `FeatureContext`. Respect flags (e.g. `wallet` is OFF; `homepage_builder` gates `/admin/homepage`;
+   `dynamic_pricing` is OFF by default — landed-cost when ON).
 
 ## Features Map
 
@@ -92,6 +88,7 @@ server `getShippingCost` (zone fees + free threshold from DB). Checkout/cart **p
 | Auth | `features/auth/` | login/register/forgot, `AuthGuard`, httpOnly session via `/api/auth/*` |
 | Favorites/wishlist | `shared/store/favorites.store.ts` | shared across shop cards, product, account |
 | Bridal custom | `features/bridal-custom/` | multipart → `/api/bridal-requests` + R2; replies ≤ 2 days |
+| Homepage | `features/homepage/` | classic home + optional `homepage_blocks` renderer (`homepage_builder` flag) |
 | Admin | `features/admin/` | full CRUD modules (P8–P11) + **dashboard stats / audit writes (P12)** |
 
 **Persisted Zustand keys:** `Zaya-cart`, `Zaya-favorites` (guest wishlist; synced to
@@ -109,7 +106,7 @@ Admin (`AdminGuard` + `requireAdmin`): `/admin` · `/admin/login` · `/admin/for
 `/admin/products` · `/admin/products/new` · `/admin/products/[id]/edit` · `/admin/categories` ·
 `/admin/categories/new` · `/admin/categories/[slug]/edit` · `/admin/orders` · `/admin/orders/[id]` ·
 `/admin/users` · `/admin/users/[id]` · `/admin/locations` · `/admin/promos` · `/admin/bridal` ·
-`/admin/bridal/[id]` · `/admin/settings` — `/admin` dashboard stats live (P12).
+`/admin/bridal/[id]` · `/admin/activity` · `/admin/settings` — dashboard + activity (P18).
 Legal/marketing: `/about` · `/contact` · `/privacy` · `/terms` · `/cookies`
 
 Categories: jewelry, bags, hair, scarves, sunglasses, watches, **bride**.
@@ -161,9 +158,10 @@ Full, phased specs live in **`docs/backend/`** — read the index first (`README
 - Wallet flag OFF → page + API 404 (seeded wallet txns ready for when flag flips).
 - Review **create** API exists (auth); no storefront submit UI yet.
 - Seed passwords (`password123`) are for local/remote bootstrap only — rotate before public go-live.
-- **API.md** documents the live storefront + admin contract. Admin Phase 8–12 + P16–**P17 inventory**
-  done; remaining P18–23 in `06-tasks` / `10`.
-- **Roadmap:** P18–23 enhancements (`10`), **Paymob** + **Bosta** (`09`), Temu + landed-cost (`11`), Arabic RTL.
+- **API.md** documents the live storefront + admin contract. Admin Phase 8–12 + P16–P26 done;
+  **P13 Paymob** + **P14 Bosta** + **P15 hardening** (webhook_events, retries, reconcile) done — see `09`.
+  Flags `online_payments` / `bosta_shipping` default OFF.
+- **Roadmap:** production secret cutover + deploy smoke, Arabic RTL.
 - **Catalog visibility:** lists/search = `published` only; product detail allows `published`|`hidden`;
   checkout requires `published` + available stock (reserves on place; cancel releases; delivered sells).
   Admin create defaults to `draft`; DELETE archives.

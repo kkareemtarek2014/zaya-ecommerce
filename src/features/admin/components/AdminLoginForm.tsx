@@ -10,6 +10,7 @@ import { AppError } from '@/shared/contracts/errors';
 import { useLogin, useLogout } from '@/features/auth/hooks/useAuth';
 import { loginSchema, type LoginValues } from '@/features/auth/schema/auth.schema';
 import { useAuthStore } from '@/features/auth/store/auth.store';
+import { isStaffRole } from '@/shared/rbac';
 
 export function AdminLoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export function AdminLoginForm() {
     setFormError(null);
     try {
       const loggedIn = await loginMutation.mutateAsync(values);
-      if (loggedIn.role !== 'admin') {
+      if (!isStaffRole(loggedIn.role)) {
         await logoutMutation.mutateAsync();
         setFormError('This account does not have admin access.');
         return;
@@ -50,9 +51,9 @@ export function AdminLoginForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       {formError && <p className="text-sm text-status-error">{formError}</p>}
-      {user && user.role !== 'admin' ? (
+      {user && !isStaffRole(user.role) ? (
         <p className="text-sm text-text-secondary">
-          Signed in as {user.email}, but this account is not an admin.
+          Signed in as {user.email}, but this account is not staff.
         </p>
       ) : null}
       <Input

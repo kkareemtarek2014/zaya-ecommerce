@@ -343,25 +343,294 @@ are green. Pricing/shipping must read **effective settings** once P11 lands.
 - [x] Product edit stock UI; settings; dashboard low-stock.
 - [ ] ⏳ [V] oversell blocked; cancel releases; deliver sells; adjust logs movement.
 
+### Phase 18 — Order timeline ⭐ + notifications + activity
+> **Revision notes (locked, vs `10` §2/§10/§16/§20 + `05` P18 + `02` §2.18–2.19):**
+> - **Migration:** `order_status_history` (`id`, `order_id`, `from_status?`, `to_status`,
+>   `actor` ∈ admin|system|paymob|bosta, `actor_id?`, `note?`, `created_at`);
+>   `notifications` (`id`, `type` ∈ new_order|low_stock|bridal_request|payment_failed,
+>   `title`, `body`, `entity`, `entity_id`, `read`, `created_at`).
+> - **Timeline writes:** checkout create → `placed` (`actor=system`); admin status patch → row with
+>   `actor=admin` + `actor_id`. Paymob/Bosta actors reserved for P13–P15 (no webhooks yet).
+> - **API:** admin + storefront order DTOs include `timeline[]`. Notifications:
+>   `GET /api/admin/notifications`, `PATCH .../[id]/read`, `POST .../read-all`.
+>   `GET /api/admin/activity` (friendly feed over `audit_log`); `GET /api/admin/audit-log`
+>   (paginated/filterable viewer — same page UI as activity with a raw toggle is fine).
+> - **Notifications written now:** new order, bridal submit, low-stock threshold crossed (after
+>   reserve/sale/adjust). `payment_failed` type exists; writers wait for Paymob (P13).
+> - **UI:** event timeline on admin order + history-aware storefront timeline; bell in admin topbar
+>   (poll); Activity nav + dashboard strip; `/admin/activity` page.
+> - **Out:** live push, Paymob/Bosta webhook timeline rows, cron reminder jobs (P22).
+> **Reviewed 2026-07-13 — complete.** Migration `0004_medical_lilith` (`order_status_history` +
+> `notifications`); timeline on place/admin status; notifications (order/bridal/low-stock); activity
+> feed + audit-log viewer; topbar bell; dashboard strip. `typecheck`/`lint`/`assert:no-secrets`/`build`
+> green. ⏳ remote migrate + smoke on your machine.
+- [x] Migration + contracts (timeline / notifications / activity / audit-log).
+- [x] Wire timeline + notification writers; admin APIs.
+- [x] Timeline UI, notification bell, activity page/dashboard.
+- [ ] ⏳ [V] status change logs timeline; bell shows new order; activity lists audits.
+
+### Phase 19 — Catalog productivity
+> **Revision notes (locked, vs `10` §6–§9/§11/§12 + `05` P19):**
+> - **Duplicate ⭐:** `POST /api/admin/products/[id]/duplicate` → `draft` clone (new id/slug/SKU,
+>   `stock_qty=0`, images re-used by URL, SEO cleared); returns product for edit.
+> - **Bulk ⭐:** `POST /api/admin/products/bulk` `{ ids[], action, payload? }` with
+>   `archive|publish|hide|set-category` (per-id results). UI: row checkboxes + toolbar + confirm.
+> - **CSV:** products only — `GET /api/admin/products/export?format=csv`,
+>   `POST /api/admin/products/import` (multipart) → draft upserts by SKU/slug + row report.
+>   Orders/customers CSV deferred.
+> - **Search:** admin `q` matches name **or** SKU **or** tags **or** description (storefront unchanged).
+> - **Media library:** `media_assets` table + `GET/POST /api/admin/media`, `DELETE .../[id]`
+>   (blocked if URL still on a product/category); `/admin/media` page; product image picker.
+> - **Rich text:** `description_format` editable (`plain`|`html`); sanitize HTML on write (allow-list);
+>   storefront renders HTML safely when format is `html`. Lightweight format control (no TipTap/etc.).
+> - **Out:** heavy WYSIWYG packages, FTS, orders/customers CSV, homepage media fields (P20/P23).
+> **Reviewed 2026-07-13 — complete.** Migration `0005_fantastic_nico_minoru` (`media_assets`);
+> duplicate/bulk/CSV/media APIs; admin search on name/SKU/tags/description; HTML sanitize on write
+> + safe storefront render; products list (bulk + duplicate + CSV); `/admin/media` + `MediaPicker`;
+> description format on ProductForm. `typecheck`/`lint`/`assert:no-secrets`/`build` green.
+> ⏳ remote migrate + smoke (duplicate/bulk/CSV/media/HTML) on your machine.
+- [x] Migration `media_assets` + contracts.
+- [x] Duplicate / bulk / CSV / media / sanitize / admin search APIs.
+- [x] Products list bulk+duplicate+CSV; media page/picker; description format UI.
+- [ ] ⏳ [V] duplicate → draft; bulk archive; CSV round-trip; media attach; HTML description renders.
+
+### Phase 20 — Insight (Customer 360 + coupons + analytics + settings)
+> **Revision notes (locked, vs `10` §3/§13/§14/§18 + `02` §2.21–2.22 + `05` P20):**
+> - **Dashboard analytics:** extend `GET /api/admin/stats` with `revenueToday`, `revenueThisMonth`,
+>   `avgOrderValue`, `bestSellers[]` (qty+revenue, top 5), `mostViewed[]`, `topCategories[]`,
+>   `newCustomers` (users created last 30d). Conversion rate **deferred**.
+> - **`product_views`:** `product_id` PK, `views`, `updated_at` — increment on product page view
+>   (`POST /api/products/[id]/view` or server page load). Powers `mostViewed`.
+> - **Customer 360:** extend `GET /api/admin/users/[id]` with
+>   `stats { ordersCount, totalSpent, lastOrderAt }`, keep `recentOrders[]`, add `favorites[]`
+>   (id/name/image) + `addresses[]` (SavedAddress shape). UI on `/admin/users/[id]`.
+> - **Coupon usage:** migration `promo_redemptions` (`id`, `promo_code`→promos, `order_id`→orders
+>   cascade, `user_id?`, `discount`, `created_at`) written on place when promo applied; optional
+>   `promos.max_redemptions`; validatePromo rejects when remaining=0. Admin promo DTO gains usage
+>   (`timesUsed`, `remaining`, `discountTotal`, `revenueTotal`) + optional customer list on detail.
+>   Backfill redemptions from existing `orders.promo_code` in migration.
+> - **Expanded settings (key-value):** logoUrl, faviconUrl, contactEmail, contactPhone,
+>   whatsappNumber, social Instagram/Facebook/TikTok, seoDefaultTitle/Description, footerText,
+>   `maintenanceMode`. Logo/favicon = URL strings (media library picker). Shipping fees stay on
+>   Locations. Storefront config exposes `maintenanceMode` (+ existing shipping fields).
+> - **Maintenance:** middleware rewrites non-admin pages to `/maintenance` when on; bypass
+>   `/admin/**`, `/api/**`, `/maintenance`, auth pages needed for admin login. Customers do **not**
+>   bypass — only admin routes.
+> - **Out:** visit/session conversion analytics, RBAC (P21), cron (P22), homepage blocks (P23),
+>   Customer/orders CSV.
+> **Reviewed 2026-07-13 — complete.** Migration `0006_opposite_ultimates` (`promo_redemptions`,
+> `product_views`, `promos.max_redemptions` + order backfill); extended admin stats; Customer 360;
+> redemption write + max validate; product view ping; expanded settings + maintenance middleware
+> (`/maintenance`). `typecheck`/`lint`/`assert:no-secrets`/`build` green.
+> ⏳ remote migrate + smoke (KPIs / 360 / promo / views / maintenance) on your machine.
+- [x] Migration `promo_redemptions` + `product_views` + `promos.max_redemptions`.
+- [x] Stats / Customer 360 / redemptions+validate / product view / expanded settings APIs.
+- [x] Dashboard KPIs; user 360 UI; promo usage; SettingsForm + `/maintenance` + middleware.
+- [ ] ⏳ [V] stats KPIs; user spent/favorites; promo redemption; view→mostViewed; maintenance gate.
+
+### Phase 21 — RBAC
+> **Revision notes (locked, vs `10` §19 + `02` §2.5 + `05` P21):**
+> - **Roles:** expand `users.role` to
+>   `customer | admin | manager | order_manager | product_manager | content_manager`
+>   (default `customer`). No `role_permissions` table — **code-config first**.
+> - **`ROLE_PERMISSIONS`:** shared module (`src/shared/rbac/`) with permissions like
+>   `dashboard:read`, `products:read|write`, `categories:write`, `media:write`,
+>   `orders:read|write`, `users:read|write`, `locations:write`, `promos:write`,
+>   `bridal:write`, `settings:write`, `activity:read`, `notifications:read`.
+>   Full **`admin`** = all. **`manager`** = all except `settings:write` + `users:write`.
+>   Specialists get domain perms + `dashboard:read` (+ notifications/activity where useful).
+> - **Gates:** `requireAdmin` → any staff role (rate-limit kept). New
+>   `requirePermission(request, perm)` for API routes. Client: `isStaffRole` /
+>   `hasPermission`; AdminGuard allows staff; nav + route map filter by perm →
+>   `/admin/forbidden` if lacking.
+> - **Last full Admin:** cannot demote/delete the last `role=admin`; only `admin`
+>   may assign/promote to `admin`. Staff cannot edit own role.
+> - **Out:** dynamic `role_permissions` table, granular field-level ACL, multi-tenant.
+> - **No SQL migration required** (role col is unconstrained text); update drizzle enum +
+>   contracts only.
+> **Reviewed 2026-07-13 — complete.** Shared `ROLE_PERMISSIONS` + expanded roles; `requirePermission`
+> on admin APIs; AdminGuard/nav/login/UserForm; last-admin + assign-admin guards; bridal media gate.
+> `typecheck`/`lint`/`assert:no-secrets`/`build` green. ⏳ smoke with specialist roles on your machine.
+- [x] Shared `ROLE_PERMISSIONS` + role/permission contracts.
+- [x] `requirePermission` on admin APIs; last-admin + assign-admin guards.
+- [x] AdminGuard/nav/login/UserForm for expanded roles + route permission map.
+- [ ] ⏳ [V] product_manager blocked from settings API; order_manager can patch orders;
+      last admin protected.
+
+### Phase 22 — Automation (Cron Triggers)
+> **Revision notes (locked, vs `10` §21 + `01` jobs + `05` P22):**
+> - **Infra:** custom Worker (`src/cloudflare-worker.ts`) re-exports OpenNext `fetch` +
+>   `scheduled`; `wrangler.jsonc` `main` + `triggers.crons`.
+> - **Jobs in `src/server/jobs/`** (idempotent, take `Db`/`env`, no request path):
+>   1. **cancel-unpaid** (`*/15 * * * *`) — `paymentMethod∈card|wallet` + `paymentStatus=pending`
+>      + not cancelled/delivered, older than `unpaid_order_timeout_minutes` (default 60) → cancel +
+>      `releaseStockForOrder` + timeline `actor=system`. **COD never auto-cancelled.**
+>   2. **pending-reminders** (`0 6 * * *`) — orders in `placed|confirmed` older than
+>      `pending_reminder_hours` (default 48) → notification `order_reminder` (deduped).
+>   3. **cleanup-sessions** (`0 6 * * *`) — delete `sessions` with `expires_at < now`.
+>   4. **daily-sales-summary** (`0 6 * * *`) — UTC-day non-cancelled revenue/order count →
+>      notification `daily_summary`.
+> - **Out of P22:** Paymob/Bosta reconcile (P13/P14), Temu sync (P25), FX refresh (P24) —
+>   stubs/no-ops only if mentioned in dispatcher comments.
+> - **Config:** settings keys above + `cron_last_runs` JSON map. Admin Settings shows timeouts +
+>   last runs; `POST /api/admin/jobs/run` `{ job }` for manual smoke (`settings:write`).
+> - **Notifications:** extend types with `order_reminder` | `daily_summary` (no SQL migration —
+>   text col). No audit_log rows from cron (actor FK requires a user).
+> **Reviewed 2026-07-13 — complete.** Custom worker + wrangler crons; jobs (unpaid cancel, reminders,
+> sessions, daily summary); settings timeouts + last runs + Run now. `typecheck`/`lint`/
+> `assert:no-secrets`/`build` green. ⏳ deploy + trigger cron / Run now smoke on your machine.
+- [x] Custom worker + wrangler crons + jobs dispatcher.
+- [x] Four jobs + settings keys + notification types.
+- [x] Settings UI last-runs/timeouts + admin run endpoint.
+- [ ] ⏳ [V] unpaid cancel releases stock; sessions prune; daily summary notify; manual run OK.
+
+### Phase 23 — Homepage builder (flagged)
+> **Revision notes (locked, vs `10` §17 + `02` §2.23 + `05` P23):**
+> - **Flag:** `homepage_builder` in `features.config` — gates `/admin/homepage` (middleware 404 when
+>   off). Storefront: if flag ON **and** ≥1 active block → render blocks in `position` order;
+>   else keep today’s classic hardcoded home (hero/trust/categories/featured/recent/SEO).
+> - **Table `homepage_blocks`:** `id`, `type` ∈ hero|featured|new_arrivals|collection|promo,
+>   `position` int, `config` JSON, `active` bool, `created_at`.
+> - **Config shapes (Zod):** hero `{ title, subtitle?, image?, ctaLabel?, ctaHref?, … }`;
+>   featured `{ title?, productIds? }` (empty ids → existing featured products);
+>   new_arrivals `{ title?, limit? }`; collection `{ title?, categorySlug, description? }`;
+>   promo `{ title, body?, image?, ctaLabel?, ctaHref? }`.
+> - **API:** public `GET /api/homepage-blocks` (active only); admin CRUD +
+>   `POST .../reorder` `{ ids[] }`. Permission **`homepage:write`** (admin/manager/content_manager).
+> - **UI:** `/admin/homepage` list/add/edit/toggle/reorder + MediaPicker for images.
+> - **Out:** drag library (use up/down), TipTap, A/B tests, per-locale blocks.
+- [x] Migration + flag + `homepage:write` RBAC.
+- [x] Public + admin block APIs/services.
+- [x] Admin builder UI + storefront block renderer + classic fallback.
+- [x] [V] flag off → classic home; flag on + blocks → ordered sections; admin CRUD.
+
+### Phase 24 — Dynamic pricing engine (flagged)
+> **Revision notes (locked, vs `11` §1 + §5 + §7/§8 + `02` product/fx columns):**
+> - **Flag `dynamic_pricing` (default OFF):** OFF → flat `basePrice EGP × (1+profit_margin)` via
+>   existing `getSellPrice`. ON → for products with `base_price_usd` use landed-cost §1.2; else
+>   flat fallback. Cost inputs never on storefront DTOs.
+> - **`settings` keys:** `usd_egp_rate`, `bulk_shipping_usd`, `customs_duty_rate`, `vat_rate`,
+>   `handling_fee_egp`, `target_margin`, `price_rounding_egp` (+ keep `profit_margin` for flat).
+> - **`fx_rates` table:** history; cron `fx-rate-refresh` (daily) writes latest + updates
+>   `usd_egp_rate`. Optional `FX_API_KEY`; Frankfurter fallback when unset.
+> - **`products`:** `base_price_usd` (real null), `landed_cost` (int null snapshot). Keep
+>   `base_price` as EGP flat-model cost (not overwritten on reprice).
+> - **Single authority:** `computeSellPrice(product, settings)` in `pricing.service`.
+> - **`landed-cost-reprice`:** after FX refresh / pricing-setting writes; admin manual run OK.
+> - **Out of P24:** Temu importer/source columns (P25), bundles/preorders (P26).
+- [x] Migration + flag + settings keys + `fx_rates`.
+- [x] Landed-cost `computeSellPrice` + wire product/order/admin mappers.
+- [x] `fx-rate-refresh` + `landed-cost-reprice` jobs; admin settings/product USD fields.
+- [x] [V] sample USD → expected EGP; rate change re-prices; flag OFF = flat; no cost leaks.
+
+### Phase 25 — Temu importer + stock sync
+> **Revision notes (locked, vs `11` §2–§4 + §7/§8 + `02` source columns):**
+> - **`products` columns:** `source_provider`, `source_url`, `source_product_id`,
+>   `source_variant_map` (JSON), `source_in_stock`, `last_synced_at`, `fulfilment_type`
+>   (`local_stock`|`dropship`, default `local_stock`). Pre-order fields stay P26.
+> - **Import:** `POST /api/admin/import/temu` `{ url }` → draft product (never auto-publish).
+>   Provider-abstracted `temu-import.service`; images → R2 + media library; description as HTML;
+>   USD base → landed cost via P24 engine. Permission `products:write`. Rate-limited + audit.
+> - **Secret:** `SCRAPER_API_KEY` (Wrangler / `.dev.vars`). Value `mock` uses fixture data for
+>   local smoke tests without a third-party scraper.
+> - **Cron `temu-stock-sync`:** for Temu-linked products, if source OOS → `stock_qty=0`,
+>   `source_in_stock=false`, inventory movement `reason=sync`, notify. Never auto-inflate stock
+>   when source returns. Batch/cadence via settings; runs on `0 */4 * * *` (+ manual Run now).
+> - **Out of P25:** checkout Temu purchase (forbidden), bundles/preorders/UI timelines (P26).
+- [x] Migration source_* + fulfilment_type + inventory `sync` reason.
+- [x] temu-import service + API + R2 images + audit/rate-limit.
+- [x] temu-stock-sync job + admin import UI.
+- [x] [V] URL → draft; source OOS → qty 0; no auto-publish; mock mode works without live scraper.
+
+### Phase 26 — Merchandising & trust (flagged)
+> **Revision notes (locked, vs `11` §6 + §7/§8 + `02` §2.25–2.28):**
+> - **Flags (default OFF):** `bundles`, `preorders`, `social_proof` in `features.config`.
+> - **`bundles` + `bundle_items`:** types `bxgy` | `set` | `fixed_price`; server evaluates best
+>   discount at checkout (`createOrder`); optional cart preview via `POST /api/bundles/evaluate`.
+>   Admin CRUD `/admin/bundles` · `/api/admin/bundles` · permission `promos:write`.
+> - **Pre-orders:** `products.preorder_enabled` + `preorder_eta_days`; when flag ON + OOS + enabled
+>   → allow checkout; `order_items.is_preorder=true`; no stock reservation for those lines;
+>   labelled UI. Admin fields on product form + filter list `/admin/orders?preorder=1`.
+> - **Shipping timeline:** ProductDTO gets `shippingEta` / `fulfilmentType` (public labels only);
+>   settings keys `shipping_eta_local` / `shipping_eta_dropship` (defaults 1–2 days / 2–3 weeks).
+> - **Social proof:** settings `instagram_handle` + optional curated `instagram_post_urls` JSON;
+>   storefront section on home when `social_proof` ON (no heavy 3rd-party JS).
+> - **Localized copy:** product form shows “needs localization” hint when tag `temu-import`
+>   and description still generic (admin workflow only).
+> - **Out:** Paymob prepay for pre-orders, Instagram cron scrape, TipTap localization AI.
+- [x] Migration + flags + settings keys.
+- [x] Bundles evaluate + admin CRUD.
+- [x] Pre-order stock/checkout + product fields + timeline UI + social section.
+- [x] [V] B2G1 server-side; preorder gate; ETA labels; flags OFF = unchanged storefront.
+
 ## Phases 16–23 — Production enhancements
-The remaining enhancement task list (order timeline ⭐, bulk ⭐, duplication ⭐, audit
-viewer ⭐, CSV, media library, notifications, customer 360, coupon usage, analytics, RBAC,
-cron, homepage builder) lives in **`10-enhancements.md`**. P16 catalog depth and P17 inventory are above.
+P16–P23 are detailed above. See also **`10-enhancements.md`**.
 
 ## Phases 24–26 — Sourcing, pricing & merchandising
-The full, granular task list (landed-cost pricing engine, Temu importer, stock sync, bundles,
-pre-orders, shipping timelines, social proof) lives in **`11-sourcing-pricing-merchandising.md`** Part 8.
-Key adds: product source/pricing columns + `bundles`/`bundle_items`/`fx_rates` (`02` §2.25–2.28),
-`SCRAPER_API_KEY`/`FX_API_KEY` (`01`), `temu-stock-sync` + `fx-rate-refresh` cron (`server/jobs/`),
-`computeSellPrice` as the single price authority, and flags `dynamic_pricing/bundles/preorders/
-social_proof`. Automation is catalog+inventory only — never auto-purchasing at checkout.
+P24 is detailed above. P25–P26 (importer, stock sync, merchandising) live in
+**`11-sourcing-pricing-merchandising.md`** Part 8.
+Key adds for later: source columns + `bundles`/`bundle_items` (`02` §2.25+),
+`SCRAPER_API_KEY`, `temu-stock-sync` cron, flags `bundles/preorders/social_proof`.
+Automation is catalog+inventory only — never auto-purchasing at checkout.
 
 ## Phases 13–15 — Payments (Paymob) & Shipping (Bosta)
-The full, granular integration task list lives in **`09-integrations-bosta-paymob.md` Part E**. Key
-adds: `payments`/`shipments` tables (`02`), `PAYMOB_*`/`BOSTA_*` secrets (`01`), HMAC-SHA512 Paymob
-webhook + Bosta status-mapping webhook (both idempotent), checkout method selector + confirmation polling,
-governorate→Bosta location mapping, and admin shipment create/track. Webhooks are the source of truth —
-never mark paid/shipped from the browser.
+
+### Phase 13 — Paymob payments (card + wallet)
+> **Revision notes (locked, vs `09` Part A + D/E + `02` §2.13a):**
+> - **Flag `online_payments` (default OFF):** when OFF, checkout stays COD-only (current). When ON
+>   + Paymob secrets present → card/wallet selector.
+> - **`payments` table** + existing `orders.payment_method`/`payment_status` (already on schema).
+> - **Flow:** `POST /api/orders` (card/wallet → `payment_status=pending`) →
+>   `POST /api/payments/paymob/intention` → redirect Unified Checkout →
+>   `POST /api/webhooks/paymob` (HMAC-SHA512 source of truth) → confirmation polls
+>   `GET /api/payments/[orderId]`.
+> - **Never** trust browser redirect alone. Failure → `payment_status=failed`, order stays `placed`,
+>   retry via new intention. COD path untouched. Bosta auto-create deferred to **P14**.
+> - Secrets: `PAYMOB_SECRET_KEY`, `PAYMOB_PUBLIC_KEY`, `PAYMOB_HMAC_SECRET`,
+>   `PAYMOB_INTEGRATION_ID_CARD`, `PAYMOB_INTEGRATION_ID_WALLET` (optional mock via
+>   `PAYMOB_SECRET_KEY=mock` for local smoke).
+- [x] Secrets + env types + `payments` migration + `online_payments` flag.
+- [x] `paymob.service` intention + HMAC webhook + payment status API.
+- [x] Checkout method selector + redirect + confirmation polling.
+- [x] [V] typecheck/lint/assert/build; COD unchanged when flag OFF.
+
+### Phase 14 — Bosta shipping
+> **Revision notes (locked, vs `09` Part B + D/E + `02` §2.13b):**
+> - **Flag `bosta_shipping` (default OFF):** when OFF, no auto-create / admin actions no-op with clear error.
+> - **`shipments` table** + `governorates.bosta_city_id` / `bosta_zone` / `bosta_district` (admin editable).
+> - **Auto-create** delivery after COD place **or** Paymob paid webhook (best-effort — never fail checkout).
+> - **Webhook** `POST /api/webhooks/bosta?secret=…` verifies `BOSTA_WEBHOOK_SECRET`; maps state → OrderStatus;
+>   idempotent on `(bosta_delivery_id, bosta_state)` via raw event id when present.
+> - **Admin:** `/api/admin/orders/[id]/shipment` create/refresh, `/api/admin/shipments` list;
+>   Locations page edits Bosta city mapping. Tracking on storefront OrderDTO.tracking.
+> - Secrets: `BOSTA_API_KEY` (`mock` for local), `BOSTA_WEBHOOK_SECRET`, `BOSTA_BUSINESS_ID`.
+> - **Out of P14:** production go-live hardening (P15), Paymob+Bosta reconcile cron.
+> **Reviewed 2026-07-14 — complete.** Migration `0012` (`shipments` + governorate Bosta cols);
+> `bosta.service` create/mock/live + webhook + auto-create; admin create/refresh + `/admin/shipments`;
+> Locations Bosta fields; storefront tracking. `typecheck`/`lint`/`assert:no-secrets`/`build` green.
+> ⏳ staging Bosta smoke on your machine.
+- [x] Secrets + env + flag + `shipments` + governorate Bosta columns + seed mapping.
+- [x] `bosta.service` create/track + auto-create + webhook mapping.
+- [x] Admin shipment UI + Locations Bosta fields + storefront tracking.
+- [x] [V] typecheck/lint/assert/build; flag OFF = no Bosta calls.
+
+### Phase 15 — Hardening & go-live
+> **Revision notes (locked, vs `09` Part E + C.1):**
+> - **`webhook_events` table** — `(id, provider, event_id UNIQUE(provider,event_id), payload?, received_at)`
+>   claim-before-process for Paymob + Bosta (strict dedupe beyond soft checks).
+> - **Provider retries** — shared `withRetry` (3 attempts, exponential backoff) on live Paymob intention +
+>   Bosta create/get; no retry on 4xx except 429.
+> - **Reconcile job `integrations-reconcile`** — hourly (+ Run now): sync payment↔order mismatches,
+>   auto-create missing shipments when Bosta flag ON, refresh open shipments, report counts.
+> - **Admin** `GET /api/admin/integrations/status` — flag/secret health + issue counts; Settings cron
+>   panel lists the new job. Timing-safe Bosta secret compare.
+> - **Out of agent:** production Wrangler secret swap + live deploy smoke (checklist ⏳ on your machine).
+> **Reviewed 2026-07-14 — complete.** Migration `0013_last_salo` (`webhook_events`); `fetchWithRetry`;
+> Paymob/Bosta claim + pending→success fix; hourly reconcile + Settings health panel. `typecheck`/`lint`/
+> `assert:no-secrets`/`build` green. ⏳ production keys + remote migrate + deploy smoke on your machine.
+- [x] `webhook_events` migration + claim in Paymob/Bosta webhooks; retry helper on provider calls.
+- [x] Reconcile job + admin integrations status (+ cron wiring).
+- [x] Docs / go-live notes; typecheck/lint/assert/build.
 
 ---
 

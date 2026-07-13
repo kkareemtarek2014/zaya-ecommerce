@@ -18,10 +18,30 @@ import * as productsRepo from '@/server/repositories/products.repo';
 import type { ProductRow } from '@/server/repositories/products.repo';
 import type { OrderItemRow } from '@/server/repositories/orders.repo';
 import { getAdminProduct } from '@/server/services/admin-catalog.service';
+import { createNotification } from '@/server/services/notifications.service';
 import { eq, sql } from 'drizzle-orm';
 import { products, settings } from '@/server/db/schema';
 
 const DEFAULT_LOW_STOCK_THRESHOLD = 5;
+
+async function maybeNotifyLowStock(
+  db: Db,
+  product: ProductRow,
+  previousAvailable: number,
+  nextAvailable: number,
+): Promise<void> {
+  const threshold = await getLowStockThreshold(db);
+  if (previousAvailable > threshold && nextAvailable <= threshold) {
+    await createNotification(db, {
+      type: 'low_stock',
+      title: 'Low stock',
+      body: `${product.name} · ${nextAvailable} left`,
+      entity: 'product',
+      entityId: product.id,
+      dedupe: true,
+    });
+  }
+}
 
 function toMovementDTO(
   row: inventoryRepo.InventoryMovementRow,
@@ -121,6 +141,7 @@ export async function adjustProductStock(
   }
 
   const available = newQty - product.reservedQty;
+  const prevAvailable = availableQty(product);
   await productsRepo.updateProduct(db, productId, {
     stockQty: newQty,
     ...(available <= 0 ? { inStock: false } : {}),
@@ -134,6 +155,8 @@ export async function adjustProductStock(
     actorId,
     note: note ?? null,
   });
+
+  await maybeNotifyLowStock(db, product, prevAvailable, available);
 
   return getAdminProduct(productId);
 }
@@ -154,31 +177,58 @@ export async function reserveStockForOrder(
     );
   }
 
+  // Reserve every line atomically first (conditional UPDATE — no oversell under
+  // concurrency). If any line can't be satisfied, roll back the ones already
+  // reserved in this call, then throw. Movements/notifications are written only
+  // after the whole order reserves, so no orphan history is left behind.
+  const reserved: {
+    productId: string;
+    qty: number;
+    product: ProductRow;
+    availableBefore: number;
+  }[] = [];
+
+  const rollback = async (): Promise<void> => {
+    for (const r of reserved) {
+      await productsRepo
+        .releaseProductStock(db, r.productId, r.qty)
+        .catch(() => undefined);
+    }
+  };
+
   for (const [productId, qty] of byProduct) {
     const product = await productsRepo.findProductByIdAny(db, productId);
-    if (!product) throw new NotFoundError(`Product ${productId} not found`);
-
-    const available = availableQty(product);
-    if (!product.inStock || available < qty) {
-      throw new ConflictError(
-        `${product.name} does not have enough stock (available ${available})`,
-      );
+    if (!product) {
+      await rollback();
+      throw new NotFoundError(`Product ${productId} not found`);
     }
 
-    const newReserved = product.reservedQty + qty;
-    await productsRepo.updateProduct(db, productId, {
-      reservedQty: newReserved,
-      ...(product.stockQty - newReserved <= 0 ? { inStock: false } : {}),
-    });
+    const availableBefore = availableQty(product);
+    const ok = await productsRepo.reserveProductStock(db, productId, qty);
+    if (!ok) {
+      await rollback();
+      throw new ConflictError(
+        `${product.name} does not have enough stock (available ${Math.max(0, availableBefore)})`,
+      );
+    }
+    reserved.push({ productId, qty, product, availableBefore });
+  }
 
+  for (const r of reserved) {
     await writeMovement(db, {
-      productId,
-      oldQty: product.stockQty,
-      newQty: product.stockQty,
+      productId: r.productId,
+      oldQty: r.product.stockQty,
+      newQty: r.product.stockQty,
       reason: 'reservation',
       orderId,
-      note: `Reserved ${qty}`,
+      note: `Reserved ${r.qty}`,
     });
+    await maybeNotifyLowStock(
+      db,
+      r.product,
+      r.availableBefore,
+      r.availableBefore - r.qty,
+    );
   }
 }
 
@@ -237,11 +287,13 @@ export async function commitSaleForOrder(
     const oldQty = product.stockQty;
     const newQty = Math.max(0, oldQty - qty);
     const newReserved = Math.max(0, product.reservedQty - qty);
+    const prevAvailable = availableQty(product);
+    const nextAvailable = newQty - newReserved;
 
     await productsRepo.updateProduct(db, productId, {
       stockQty: newQty,
       reservedQty: newReserved,
-      inStock: newQty - newReserved > 0,
+      inStock: nextAvailable > 0,
     });
 
     await writeMovement(db, {
@@ -252,6 +304,8 @@ export async function commitSaleForOrder(
       orderId,
       note: `Sold ${qty}`,
     });
+
+    await maybeNotifyLowStock(db, product, prevAvailable, nextAvailable);
   }
 }
 

@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { USER_ROLES } from '@/shared/rbac';
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -7,7 +8,7 @@ export const users = sqliteTable('users', {
   phone: text('phone'),
   passwordHash: text('password_hash').notNull(),
   role: text('role', {
-    enum: ['customer', 'admin'],
+    enum: USER_ROLES,
   })
     .notNull()
     .default('customer'),

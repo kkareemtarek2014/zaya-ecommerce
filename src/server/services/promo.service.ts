@@ -2,6 +2,7 @@ import 'server-only';
 import type { ValidatePromoResult } from '@/shared/contracts/promo.contract';
 import { getRequestDb } from '@/server/db/request';
 import * as promosRepo from '@/server/repositories/promos.repo';
+import * as redemptionsRepo from '@/server/repositories/promo-redemptions.repo';
 
 /**
  * Authoritative promo validation — mirrors former validatePromoCode().
@@ -23,6 +24,13 @@ export async function validatePromo(
       valid: false,
       error: `Minimum order value for this code is ${promo.minOrderValue} EGP`,
     };
+  }
+
+  if (promo.maxRedemptions != null) {
+    const used = await redemptionsRepo.countRedemptionsByCode(db, promo.code);
+    if (used >= promo.maxRedemptions) {
+      return { valid: false, error: 'This promo code has reached its limit' };
+    }
   }
 
   let discountAmount = 0;

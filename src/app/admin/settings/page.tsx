@@ -2,6 +2,8 @@
 
 import {
   AdminBreadcrumbs,
+  CronJobsPanel,
+  IntegrationsStatusPanel,
   SettingsForm,
   useAdminSettings,
   useUpdateAdminSettings,
@@ -23,7 +25,7 @@ export default function AdminSettingsPage() {
         Settings
       </h1>
       <p className="mt-1 text-sm text-text-secondary">
-        Profit margin, free shipping, and site metadata used across the storefront.
+        Profit margin, branding, contact, SEO, maintenance, and cron automation.
       </p>
 
       <div className="mt-6">
@@ -32,21 +34,64 @@ export default function AdminSettingsPage() {
         ) : isError || !data ? (
           <p className="text-sm text-status-error">Failed to load settings.</p>
         ) : (
-          <SettingsForm
-            initial={data}
-            isLoading={updateMutation.isPending}
-            onSubmit={async (values) => {
-              try {
-                await updateMutation.mutateAsync(values);
-                toast('Settings saved', 'success');
-              } catch (err) {
-                toast(
-                  err instanceof AppError ? err.message : 'Save failed',
-                  'error',
-                );
-              }
-            }}
-          />
+          <>
+            <SettingsForm
+              initial={data}
+              isLoading={updateMutation.isPending}
+              onSubmit={async (values) => {
+                try {
+                  const n = (v: string | undefined) => {
+                    const t = v?.trim() ?? '';
+                    return t ? t : null;
+                  };
+                  await updateMutation.mutateAsync({
+                    profitMargin: values.profitMargin,
+                    freeShippingThreshold: values.freeShippingThreshold,
+                    lowStockThreshold: values.lowStockThreshold,
+                    usdEgpRate: values.usdEgpRate,
+                    bulkShippingUsd: values.bulkShippingUsd,
+                    customsDutyRate: values.customsDutyRate,
+                    vatRate: values.vatRate,
+                    handlingFeeEgp: values.handlingFeeEgp,
+                    targetMargin: values.targetMargin,
+                    priceRoundingEgp: values.priceRoundingEgp,
+                    siteName: values.siteName,
+                    siteTagline: values.siteTagline,
+                    siteUrl: values.siteUrl,
+                    logoUrl: n(values.logoUrl),
+                    faviconUrl: n(values.faviconUrl),
+                    contactEmail: n(values.contactEmail),
+                    contactPhone: n(values.contactPhone),
+                    whatsappNumber: n(values.whatsappNumber),
+                    socialInstagram: n(values.socialInstagram),
+                    socialFacebook: n(values.socialFacebook),
+                    socialTiktok: n(values.socialTiktok),
+                    shippingEtaLocal: values.shippingEtaLocal,
+                    shippingEtaDropship: values.shippingEtaDropship,
+                    instagramHandle: n(values.instagramHandle),
+                    instagramPostUrls: (values.instagramPostUrls ?? '')
+                      .split('\n')
+                      .map((u) => u.trim())
+                      .filter(Boolean),
+                    seoDefaultTitle: n(values.seoDefaultTitle),
+                    seoDefaultDescription: n(values.seoDefaultDescription),
+                    footerText: n(values.footerText),
+                    maintenanceMode: values.maintenanceMode,
+                    unpaidOrderTimeoutMinutes: values.unpaidOrderTimeoutMinutes,
+                    pendingReminderHours: values.pendingReminderHours,
+                  });
+                  toast('Settings saved', 'success');
+                } catch (err) {
+                  toast(
+                    err instanceof AppError ? err.message : 'Save failed',
+                    'error',
+                  );
+                }
+              }}
+            />
+            <IntegrationsStatusPanel />
+            <CronJobsPanel lastRuns={data.cronLastRuns} />
+          </>
         )}
       </div>
     </div>

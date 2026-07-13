@@ -3,6 +3,36 @@ NEXTJS_ENV=development
 SESSION_SECRET=replace-with-long-random-string
 PASSWORD_PEPPER=replace-with-long-random-string
 
+# P25 Temu importer — use `mock` for local smoke tests without a scraper vendor
+SCRAPER_API_KEY=mock
+
+# Optional FX provider (Frankfurter used when unset) — P24
+# FX_API_KEY=
+
+# P13 Paymob — set real keys in production; use `mock` for local smoke without Paymob
+# PAYMOB_SECRET_KEY=mock
+# PAYMOB_PUBLIC_KEY=pk_test_xxx
+# PAYMOB_HMAC_SECRET=hmac_xxx
+# PAYMOB_INTEGRATION_ID_CARD=123456
+# PAYMOB_INTEGRATION_ID_WALLET=123457
+
+# P14 Bosta — use `mock` for local smoke without Bosta staging
+# BOSTA_API_KEY=mock
+# BOSTA_WEBHOOK_SECRET=local_bosta_secret
+# BOSTA_BUSINESS_ID=
+
+# P15 go-live — replace mock/test secrets with production values via:
+#   wrangler secret put PAYMOB_SECRET_KEY
+#   wrangler secret put PAYMOB_PUBLIC_KEY
+#   wrangler secret put PAYMOB_HMAC_SECRET
+#   wrangler secret put PAYMOB_INTEGRATION_ID_CARD
+#   wrangler secret put PAYMOB_INTEGRATION_ID_WALLET
+#   wrangler secret put BOSTA_API_KEY
+#   wrangler secret put BOSTA_WEBHOOK_SECRET
+#   wrangler secret put BOSTA_BUSINESS_ID
+# Never commit production keys. Enable feature flags only after secrets are set.
+# Run hourly job `integrations-reconcile` (Settings → Cron) after cutover.
+
 # Seeded local accounts (after pnpm db:seed):
 #   customer  test@example.com / password123
 #   admin     admin@zaya-eg.com / password123

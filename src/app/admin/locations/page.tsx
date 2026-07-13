@@ -13,9 +13,13 @@ import {
   useDeleteGovernorate,
   useUpdateZoneFee,
 } from '@/features/admin';
-import type { GovernorateDTO } from '@/shared/contracts/product.contract';
+import type { AdminGovernorateDTO } from '@/shared/contracts/product.contract';
 import type { ShippingZoneDTO } from '@/shared/contracts/admin-config.contract';
-import { adminGovernorateWriteSchema } from '@/shared/contracts/admin-config.contract';
+import {
+  adminGovernorateUpdateSchema,
+  adminGovernorateWriteSchema,
+  type AdminGovernorateWrite,
+} from '@/shared/contracts/admin-config.contract';
 import {
   Button,
   ConfirmDialog,
@@ -30,9 +34,8 @@ import {
   TabsTrigger,
   useToast,
 } from '@/shared/components/ui';
-import { formatEGP } from '@/shared/utils/price';
 import { AppError } from '@/shared/contracts/errors';
-import { z } from 'zod';
+import { formatEGP } from '@/shared/utils/price';
 
 const ZONE_OPTIONS = [
   { value: 'cairo_giza', label: 'Cairo & Giza' },
@@ -41,13 +44,16 @@ const ZONE_OPTIONS = [
 ] as const;
 
 const createSchema = adminGovernorateWriteSchema;
-const editSchema = z.object({
-  name: z.string().trim().min(2),
-  zone: z.enum(['cairo_giza', 'near', 'far']),
-});
+const editSchema = adminGovernorateUpdateSchema;
 
-type CreateValues = z.infer<typeof createSchema>;
-type EditValues = z.infer<typeof editSchema>;
+type CreateValues = AdminGovernorateWrite;
+type EditValues = {
+  name?: string;
+  zone?: AdminGovernorateDTO['zone'];
+  bostaCityId?: string;
+  bostaZone?: string;
+  bostaDistrict?: string;
+};
 
 function ZoneFeeRow({ zone }: { zone: ShippingZoneDTO }) {
   const { toast } = useToast();
@@ -113,25 +119,44 @@ export default function AdminLocationsPage() {
   const deleteMutation = useDeleteGovernorate();
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [editRow, setEditRow] = useState<GovernorateDTO | null>(null);
+  const [editRow, setEditRow] = useState<AdminGovernorateDTO | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const createForm = useForm<CreateValues>({
     resolver: zodResolver(createSchema) as Resolver<CreateValues>,
-    defaultValues: { id: '', name: '', zone: 'near' },
+    defaultValues: {
+      id: '',
+      name: '',
+      zone: 'near',
+      bostaCityId: '',
+      bostaZone: '',
+      bostaDistrict: '',
+    },
   });
 
   const editForm = useForm<EditValues>({
     resolver: zodResolver(editSchema) as Resolver<EditValues>,
-    defaultValues: { name: '', zone: 'near' },
+    defaultValues: {
+      name: '',
+      zone: 'near',
+      bostaCityId: '',
+      bostaZone: '',
+      bostaDistrict: '',
+    },
   });
 
-  const openEdit = (row: GovernorateDTO) => {
+  const openEdit = (row: AdminGovernorateDTO) => {
     setEditRow(row);
-    editForm.reset({ name: row.name, zone: row.zone });
+    editForm.reset({
+      name: row.name,
+      zone: row.zone,
+      bostaCityId: row.bostaCityId ?? '',
+      bostaZone: row.bostaZone ?? '',
+      bostaDistrict: row.bostaDistrict ?? '',
+    });
   };
 
-  const columns: DataTableColumn<GovernorateDTO>[] = [
+  const columns: DataTableColumn<AdminGovernorateDTO>[] = [
     {
       key: 'id',
       header: 'ID',
@@ -149,6 +174,15 @@ export default function AdminLocationsPage() {
       header: 'Zone',
       cell: (row) =>
         ZONE_OPTIONS.find((z) => z.value === row.zone)?.label ?? row.zone,
+    },
+    {
+      key: 'bosta',
+      header: 'Bosta city',
+      cell: (row) => (
+        <span className="font-mono text-xs text-text-muted">
+          {row.bostaCityId ?? '—'}
+        </span>
+      ),
     },
     {
       key: 'actions',
@@ -203,7 +237,14 @@ export default function AdminLocationsPage() {
             <Button
               type="button"
               onClick={() => {
-                createForm.reset({ id: '', name: '', zone: 'near' });
+                createForm.reset({
+                  id: '',
+                  name: '',
+                  zone: 'near',
+                  bostaCityId: '',
+                  bostaZone: '',
+                  bostaDistrict: '',
+                });
                 setCreateOpen(true);
               }}
             >
@@ -294,6 +335,22 @@ export default function AdminLocationsPage() {
               </option>
             ))}
           </Select>
+          <Input
+            label="Bosta city ID"
+            placeholder="Matches Bosta city name/id"
+            error={createForm.formState.errors.bostaCityId?.message}
+            {...createForm.register('bostaCityId')}
+          />
+          <Input
+            label="Bosta zone (optional)"
+            error={createForm.formState.errors.bostaZone?.message}
+            {...createForm.register('bostaZone')}
+          />
+          <Input
+            label="Bosta district (optional)"
+            error={createForm.formState.errors.bostaDistrict?.message}
+            {...createForm.register('bostaDistrict')}
+          />
         </div>
       </Dialog>
 
@@ -353,6 +410,21 @@ export default function AdminLocationsPage() {
                 </option>
               ))}
             </Select>
+            <Input
+              label="Bosta city ID"
+              error={editForm.formState.errors.bostaCityId?.message}
+              {...editForm.register('bostaCityId')}
+            />
+            <Input
+              label="Bosta zone (optional)"
+              error={editForm.formState.errors.bostaZone?.message}
+              {...editForm.register('bostaZone')}
+            />
+            <Input
+              label="Bosta district (optional)"
+              error={editForm.formState.errors.bostaDistrict?.message}
+              {...editForm.register('bostaDistrict')}
+            />
           </div>
         ) : null}
       </Dialog>

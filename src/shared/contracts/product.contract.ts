@@ -13,6 +13,12 @@ export const productDtoSchema = z.object({
   inStock: z.boolean(),
   featured: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
+  descriptionFormat: z.enum(['plain', 'html']).optional(),
+  fulfilmentType: z.enum(['local_stock', 'dropship']).optional(),
+  shippingEta: z.string().optional(),
+  /** Pre-order available when OOS (flag-gated server-side). */
+  preorderAvailable: z.boolean().optional(),
+  preorderEtaDays: z.number().int().optional(),
 });
 
 export type ProductDTO = z.infer<typeof productDtoSchema>;
@@ -45,3 +51,12 @@ export const governorateSchema = z.object({
 });
 
 export type GovernorateDTO = z.infer<typeof governorateSchema>;
+
+/** Admin locations — includes Bosta mapping (P14). */
+export const adminGovernorateDtoSchema = governorateSchema.extend({
+  bostaCityId: z.string().nullable().optional(),
+  bostaZone: z.string().nullable().optional(),
+  bostaDistrict: z.string().nullable().optional(),
+});
+
+export type AdminGovernorateDTO = z.infer<typeof adminGovernorateDtoSchema>;

@@ -47,7 +47,10 @@ export function OrderDetails({ orderId }: { orderId: string }) {
       </div>
 
       <div className="rounded-lg border border-border bg-surface-raised p-6 md:p-8">
-        <OrderStatusTimeline currentStatus={order.status} />
+        <OrderStatusTimeline
+          currentStatus={order.status}
+          timeline={order.timeline}
+        />
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">
@@ -121,6 +124,19 @@ export function OrderDetails({ orderId }: { orderId: string }) {
               </p>
               <p>{governorate?.name ?? order.address.governorate}</p>
             </div>
+            {order.tracking ? (
+              <div className="mt-4 border-t border-border pt-4 text-sm">
+                <p className="font-medium text-text-primary">Tracking</p>
+                <a
+                  href={order.tracking.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-block font-mono text-brand-primary hover:underline"
+                >
+                  {order.tracking.number}
+                </a>
+              </div>
+            ) : null}
           </div>
 
           {(order.address.notes || order.note) && (

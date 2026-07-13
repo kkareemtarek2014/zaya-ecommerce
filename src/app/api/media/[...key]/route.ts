@@ -2,6 +2,7 @@ import { withHandler } from '@/server/http/handler';
 import { NotFoundError } from '@/server/http/errors';
 import { requireAuth } from '@/server/auth/require-auth';
 import { getUploadObject } from '@/server/services/upload.service';
+import { hasPermission } from '@/shared/rbac';
 
 type Ctx = { params: Promise<{ key: string[] }> };
 
@@ -21,9 +22,11 @@ export const GET = withHandler(async (request, context) => {
 
   const isBridal = key.startsWith('bridal/');
   if (isBridal) {
-    // Wedding photos/videos are private — only an authenticated admin may read them.
+    // Wedding photos/videos — staff with bridal access only (hide existence otherwise).
     const { user } = await requireAuth(request);
-    if (user.role !== 'admin') throw new NotFoundError('Not found');
+    if (!hasPermission(user.role, 'bridal:write')) {
+      throw new NotFoundError('Not found');
+    }
   }
 
   const obj = await getUploadObject(key);

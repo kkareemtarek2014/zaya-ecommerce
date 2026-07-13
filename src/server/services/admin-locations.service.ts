@@ -5,7 +5,7 @@ import {
   adminShippingZoneFeeSchema,
   type ShippingZoneDTO,
 } from '@/shared/contracts/admin-config.contract';
-import type { GovernorateDTO } from '@/shared/contracts/product.contract';
+import type { AdminGovernorateDTO } from '@/shared/contracts/product.contract';
 import { getRequestDb } from '@/server/db/request';
 import {
   ConflictError,
@@ -14,15 +14,29 @@ import {
 } from '@/server/http/errors';
 import * as govRepo from '@/server/repositories/governorates.repo';
 
-function toGovDTO(row: govRepo.GovernorateRow): GovernorateDTO {
-  return { id: row.id, name: row.name, zone: row.zone };
+function emptyToNull(v: string | null | undefined): string | null {
+  if (v == null) return null;
+  const t = v.trim();
+  return t ? t : null;
+}
+
+function toGovDTO(row: govRepo.GovernorateRow): AdminGovernorateDTO {
+  const dto: AdminGovernorateDTO = {
+    id: row.id,
+    name: row.name,
+    zone: row.zone,
+  };
+  dto.bostaCityId = row.bostaCityId ?? null;
+  dto.bostaZone = row.bostaZone ?? null;
+  dto.bostaDistrict = row.bostaDistrict ?? null;
+  return dto;
 }
 
 function toZoneDTO(row: govRepo.ShippingZoneRow): ShippingZoneDTO {
   return { zone: row.zone, label: row.label, fee: row.fee };
 }
 
-export async function listAdminGovernorates(): Promise<GovernorateDTO[]> {
+export async function listAdminGovernorates(): Promise<AdminGovernorateDTO[]> {
   const db = await getRequestDb();
   const rows = await govRepo.findAllGovernorates(db);
   return rows.map(toGovDTO);
@@ -30,7 +44,7 @@ export async function listAdminGovernorates(): Promise<GovernorateDTO[]> {
 
 export async function createAdminGovernorate(
   raw: unknown,
-): Promise<GovernorateDTO> {
+): Promise<AdminGovernorateDTO> {
   const parsed = adminGovernorateWriteSchema.safeParse(raw);
   if (!parsed.success) {
     throw new ValidationError('Validation failed', parsed.error.flatten());
@@ -42,14 +56,24 @@ export async function createAdminGovernorate(
   const zone = await govRepo.findShippingZone(db, parsed.data.zone);
   if (!zone) throw new ValidationError('Invalid shipping zone');
 
-  const row = await govRepo.insertGovernorate(db, parsed.data);
+  const row = await govRepo.insertGovernorate(db, {
+    id: parsed.data.id,
+    name: parsed.data.name,
+    zone: parsed.data.zone,
+    bostaCityId:
+      parsed.data.bostaCityId !== undefined
+        ? emptyToNull(parsed.data.bostaCityId)
+        : parsed.data.name,
+    bostaZone: emptyToNull(parsed.data.bostaZone),
+    bostaDistrict: emptyToNull(parsed.data.bostaDistrict),
+  });
   return toGovDTO(row);
 }
 
 export async function updateAdminGovernorate(
   id: string,
   raw: unknown,
-): Promise<GovernorateDTO> {
+): Promise<AdminGovernorateDTO> {
   const parsed = adminGovernorateUpdateSchema.safeParse(raw);
   if (!parsed.success) {
     throw new ValidationError('Validation failed', parsed.error.flatten());
@@ -66,7 +90,22 @@ export async function updateAdminGovernorate(
     if (!zone) throw new ValidationError('Invalid shipping zone');
   }
 
-  const row = await govRepo.updateGovernorate(db, id, parsed.data);
+  const row = await govRepo.updateGovernorate(db, id, {
+    name: parsed.data.name,
+    zone: parsed.data.zone,
+    bostaCityId:
+      parsed.data.bostaCityId !== undefined
+        ? emptyToNull(parsed.data.bostaCityId)
+        : undefined,
+    bostaZone:
+      parsed.data.bostaZone !== undefined
+        ? emptyToNull(parsed.data.bostaZone)
+        : undefined,
+    bostaDistrict:
+      parsed.data.bostaDistrict !== undefined
+        ? emptyToNull(parsed.data.bostaDistrict)
+        : undefined,
+  });
   if (!row) throw new NotFoundError('Governorate not found');
   return toGovDTO(row);
 }
@@ -77,14 +116,12 @@ export async function deleteAdminGovernorate(
   const db = await getRequestDb();
   const existing = await govRepo.findGovernorateById(db, id);
   if (!existing) throw new NotFoundError('Governorate not found');
-
   const refs = await govRepo.countGovernorateRefs(db, id);
   if (refs > 0) {
     throw new ConflictError(
-      'Cannot delete governorate used by orders or addresses',
+      'Cannot delete governorate referenced by orders or addresses',
     );
   }
-
   await govRepo.deleteGovernorate(db, id);
   return { ok: true };
 }
@@ -99,18 +136,19 @@ export async function updateAdminShippingZoneFee(
   zone: string,
   raw: unknown,
 ): Promise<ShippingZoneDTO> {
-  if (zone !== 'cairo_giza' && zone !== 'near' && zone !== 'far') {
-    throw new ValidationError('Invalid shipping zone');
-  }
   const parsed = adminShippingZoneFeeSchema.safeParse(raw);
   if (!parsed.success) {
     throw new ValidationError('Validation failed', parsed.error.flatten());
   }
+  if (
+    zone !== 'cairo_giza' &&
+    zone !== 'near' &&
+    zone !== 'far'
+  ) {
+    throw new ValidationError('Invalid zone');
+  }
   const db = await getRequestDb();
-  const existing = await govRepo.findShippingZone(db, zone);
-  if (!existing) throw new NotFoundError('Shipping zone not found');
-
   const row = await govRepo.updateShippingZoneFee(db, zone, parsed.data.fee);
-  if (!row) throw new NotFoundError('Shipping zone not found');
+  if (!row) throw new NotFoundError('Zone not found');
   return toZoneDTO(row);
 }

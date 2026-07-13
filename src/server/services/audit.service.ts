@@ -14,7 +14,12 @@ export type AuditEntity =
   | 'shipping_zone'
   | 'settings'
   | 'bridal_request'
-  | 'inventory';
+  | 'inventory'
+  | 'media'
+  | 'homepage_block'
+  | 'temu_import'
+  | 'bundle'
+  | 'shipment';
 
 /**
  * Best-effort audit write. Never throws to the caller — mutations must succeed even if logging fails.

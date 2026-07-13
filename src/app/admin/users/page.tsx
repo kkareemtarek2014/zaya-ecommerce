@@ -21,6 +21,7 @@ import {
 } from '@/shared/components/ui';
 import { AppError } from '@/shared/contracts/errors';
 import { useAuthStore } from '@/features/auth/store/auth.store';
+import { isUserRole, ROLE_LABELS, USER_ROLES } from '@/shared/rbac';
 
 const PAGE_SIZE = 20;
 
@@ -38,10 +39,7 @@ export default function AdminUsersPage() {
       page,
       pageSize: PAGE_SIZE,
       q: q || undefined,
-      role:
-        role === 'admin' || role === 'customer'
-          ? (role as 'admin' | 'customer')
-          : undefined,
+      role: isUserRole(role) ? role : undefined,
     }),
     [page, q, role],
   );
@@ -64,7 +62,7 @@ export default function AdminUsersPage() {
       key: 'role',
       header: 'Role',
       cell: (row) => (
-        <span className="capitalize">{row.role}</span>
+        <span>{ROLE_LABELS[row.role] ?? row.role}</span>
       ),
     },
     {
@@ -141,8 +139,11 @@ export default function AdminUsersPage() {
           }}
         >
           <option value="">All roles</option>
-          <option value="customer">Customer</option>
-          <option value="admin">Admin</option>
+          {USER_ROLES.map((r) => (
+            <option key={r} value={r}>
+              {ROLE_LABELS[r]}
+            </option>
+          ))}
         </Select>
         <Button
           type="button"

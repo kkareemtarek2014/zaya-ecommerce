@@ -1,12 +1,13 @@
 import { and, count, desc, eq, sql } from 'drizzle-orm';
 import type { Db } from '@/server/db/client';
 import { orders, users } from '@/server/db/schema';
+import type { UserRole } from '@/shared/rbac';
 
 export type UserRow = typeof users.$inferSelect;
 
 export type AdminUserListFilters = {
   q?: string;
-  role?: 'customer' | 'admin';
+  role?: UserRole;
   page?: number;
   pageSize?: number;
 };
@@ -36,7 +37,7 @@ export async function createUser(
     name: string;
     phone?: string | null;
     passwordHash: string;
-    role?: 'customer' | 'admin';
+    role?: UserRole;
   },
 ): Promise<UserRow> {
   const now = new Date();
@@ -77,7 +78,7 @@ export async function updateUserAdmin(
   input: {
     name?: string;
     phone?: string | null;
-    role?: 'customer' | 'admin';
+    role?: UserRole;
   },
 ): Promise<UserRow | null> {
   const patch: Partial<typeof users.$inferInsert> = {};

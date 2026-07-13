@@ -7,6 +7,7 @@ export const inventoryReasonSchema = z.enum([
   'return',
   'reservation',
   'release',
+  'sync',
 ]);
 
 export type InventoryReason = z.infer<typeof inventoryReasonSchema>;

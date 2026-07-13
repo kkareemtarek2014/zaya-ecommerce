@@ -6,14 +6,19 @@ import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useSession } from '@/features/auth/hooks/useAuth';
 import { useHydrated } from '@/shared/hooks/useHydrated';
 import { Loader } from '@/shared/components/ui/Loader';
+import {
+  hasPermission,
+  isStaffRole,
+  permissionForAdminPath,
+} from '@/shared/rbac';
 
 interface AdminGuardProps {
   children: React.ReactNode;
 }
 
 /**
- * Gates /admin/** (except login) on session + role === 'admin'.
- * Unauthenticated → /admin/login; non-admin → /admin/forbidden.
+ * Gates /admin/** (except login) on session + staff role + route permission.
+ * Unauthenticated → /admin/login; lacking access → /admin/forbidden.
  */
 export function AdminGuard({ children }: AdminGuardProps) {
   const hydrated = useHydrated();
@@ -26,11 +31,16 @@ export function AdminGuard({ children }: AdminGuardProps) {
 
   const isLogin = pathname === '/admin/login';
   const isForbidden = pathname === '/admin/forbidden';
+  const isStaff = user ? isStaffRole(user.role) : false;
+  const routePerm = permissionForAdminPath(pathname || '/admin');
+  const canAccessRoute =
+    isStaff &&
+    (routePerm == null || hasPermission(user!.role, routePerm));
 
   useEffect(() => {
     if (!hydrated || !sessionChecked) return;
     if (isLogin) {
-      if (isAuthenticated && user?.role === 'admin') {
+      if (isAuthenticated && isStaff) {
         router.replace('/admin');
       }
       return;
@@ -40,14 +50,15 @@ export function AdminGuard({ children }: AdminGuardProps) {
       router.replace(`/admin/login?redirect=${redirect}`);
       return;
     }
-    if (user?.role !== 'admin' && !isForbidden) {
+    if (!canAccessRoute && !isForbidden) {
       router.replace('/admin/forbidden');
     }
   }, [
     hydrated,
     sessionChecked,
     isAuthenticated,
-    user?.role,
+    isStaff,
+    canAccessRoute,
     isLogin,
     isForbidden,
     pathname,
@@ -66,7 +77,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
     return null;
   }
 
-  if (user?.role !== 'admin') {
+  if (!canAccessRoute) {
     if (isForbidden) return <>{children}</>;
     return null;
   }

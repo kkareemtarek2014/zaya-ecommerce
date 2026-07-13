@@ -1,12 +1,12 @@
 import { withHandler } from '@/server/http/handler';
-import { requireAdmin } from '@/server/auth/require-admin';
+import { requirePermission } from '@/server/auth/require-admin';
 import * as adminCatalog from '@/server/services/admin-catalog.service';
 import { writeAuditLog } from '@/server/services/audit.service';
 
 type Ctx = { params: Promise<{ slug: string }> };
 
 export const PUT = withHandler(async (request, context) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'categories:write');
   const { slug } = await (context as Ctx).params;
   const decodedSlug = decodeURIComponent(slug);
   const body: unknown = await request.json();
@@ -21,7 +21,7 @@ export const PUT = withHandler(async (request, context) => {
 });
 
 export const DELETE = withHandler(async (request, context) => {
-  const auth = await requireAdmin(request);
+  const auth = await requirePermission(request, 'categories:write');
   const { slug } = await (context as Ctx).params;
   const decodedSlug = decodeURIComponent(slug);
   const result = await adminCatalog.deleteAdminCategory(decodedSlug);

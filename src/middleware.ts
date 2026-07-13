@@ -4,7 +4,34 @@ import { FEATURES } from '@/config/features.config';
 
 const SESSION_COOKIE = 'zaya_session';
 
-export function middleware(request: NextRequest) {
+function isMaintenanceBypass(pathname: string): boolean {
+  if (pathname.startsWith('/admin')) return true;
+  if (pathname.startsWith('/api')) return true;
+  if (pathname === '/maintenance' || pathname.startsWith('/maintenance/'))
+    return true;
+  if (pathname.startsWith('/_next')) return true;
+  if (pathname.startsWith('/images')) return true;
+  return false;
+}
+
+async function isMaintenanceOn(request: NextRequest): Promise<boolean> {
+  try {
+    const url = new URL('/api/storefront-config', request.url);
+    const res = await fetch(url, {
+      headers: { accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!res.ok) return false;
+    const body = (await res.json()) as {
+      data?: { maintenanceMode?: boolean };
+    };
+    return Boolean(body.data?.maintenanceMode);
+  } catch {
+    return false;
+  }
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Admin cookie gate (Edge — role checked in AdminGuard / requireAdmin)
@@ -16,6 +43,13 @@ export function middleware(request: NextRequest) {
       const login = new URL('/admin/login', request.url);
       login.searchParams.set('redirect', pathname);
       return NextResponse.redirect(login);
+    }
+  }
+
+  if (!isMaintenanceBypass(pathname)) {
+    const on = await isMaintenanceOn(request);
+    if (on) {
+      return NextResponse.rewrite(new URL('/maintenance', request.url));
     }
   }
 
@@ -37,7 +71,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

@@ -7,6 +7,9 @@ import {
   ORDER_STATUS_LABELS,
   OrderStatusSelect,
   useAdminOrder,
+  useAdminOrderShipment,
+  useCreateAdminShipment,
+  useRefreshAdminShipment,
   useUpdateAdminOrderStatus,
 } from '@/features/admin';
 import type { OrderStatus } from '@/shared/contracts/admin-ops.contract';
@@ -14,6 +17,7 @@ import { Button, useToast } from '@/shared/components/ui';
 import { formatEGP } from '@/shared/utils/price';
 import { AppError } from '@/shared/contracts/errors';
 import { OrderStatusTimeline } from '@/features/order';
+import { isFeatureEnabled } from '@/config/features.config';
 
 export default function AdminOrderDetailPage({
   params,
@@ -25,8 +29,17 @@ export default function AdminOrderDetailPage({
   const { data: order, isLoading, isError } = useAdminOrder(id);
   const updateMutation = useUpdateAdminOrderStatus(id);
   const [draftStatus, setDraftStatus] = useState<OrderStatus | null>(null);
+  const bostaOn = isFeatureEnabled('bosta_shipping');
+  const {
+    data: shipment,
+    isLoading: shipmentLoading,
+    isError: shipmentMissing,
+  } = useAdminOrderShipment(id, bostaOn);
+  const createShipment = useCreateAdminShipment(id);
+  const refreshShipment = useRefreshAdminShipment(id);
 
   const status = draftStatus ?? order?.status ?? 'placed';
+  const hasShipment = Boolean(shipment) && !shipmentMissing;
 
   return (
     <div>
@@ -84,7 +97,117 @@ export default function AdminOrderDetailPage({
             </Button>
           </div>
 
-          <OrderStatusTimeline currentStatus={order.status} />
+          <OrderStatusTimeline
+            currentStatus={order.status}
+            timeline={order.timeline}
+          />
+
+          {bostaOn ? (
+            <section className="space-y-3 rounded-(--radius-lg) border border-border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="font-medium text-text-primary">
+                  Bosta shipment
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {hasShipment ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      isLoading={refreshShipment.isPending}
+                      disabled={refreshShipment.isPending}
+                      onClick={() => {
+                        refreshShipment.mutate(undefined, {
+                          onSuccess: () =>
+                            toast('Shipment refreshed', 'success'),
+                          onError: (err) =>
+                            toast(
+                              err instanceof AppError
+                                ? err.message
+                                : 'Refresh failed',
+                              'error',
+                            ),
+                        });
+                      }}
+                    >
+                      Refresh from Bosta
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      isLoading={createShipment.isPending}
+                      disabled={createShipment.isPending || shipmentLoading}
+                      onClick={() => {
+                        createShipment.mutate(
+                          {},
+                          {
+                            onSuccess: () =>
+                              toast('Shipment created', 'success'),
+                            onError: (err) =>
+                              toast(
+                                err instanceof AppError
+                                  ? err.message
+                                  : 'Create failed',
+                                'error',
+                              ),
+                          },
+                        );
+                      }}
+                    >
+                      Create Bosta shipment
+                    </Button>
+                  )}
+                </div>
+              </div>
+              {shipmentLoading ? (
+                <p className="text-sm text-text-muted">Loading shipment…</p>
+              ) : hasShipment && shipment ? (
+                <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt className="text-text-muted">Tracking</dt>
+                    <dd>
+                      {shipment.trackingUrl && shipment.trackingNumber ? (
+                        <a
+                          href={shipment.trackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-brand-primary hover:underline"
+                        >
+                          {shipment.trackingNumber}
+                        </a>
+                      ) : (
+                        <span className="font-mono">
+                          {shipment.trackingNumber ?? '—'}
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-text-muted">Bosta state</dt>
+                    <dd>{shipment.bostaState ?? '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-text-muted">Mapped status</dt>
+                    <dd>
+                      {shipment.mappedStatus
+                        ? ORDER_STATUS_LABELS[shipment.mappedStatus]
+                        : '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-text-muted">COD amount</dt>
+                    <dd>{formatEGP(shipment.codAmount)}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <p className="text-sm text-text-muted">
+                  No shipment yet. Create one after the order is ready to
+                  fulfil, or wait for auto-create on COD / paid card.
+                </p>
+              )}
+            </section>
+          ) : null}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <section className="space-y-2 text-sm">

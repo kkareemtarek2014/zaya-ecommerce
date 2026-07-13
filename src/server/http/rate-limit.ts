@@ -43,9 +43,26 @@ export function assertRateLimit(
 /** Rate-limit auth login/register/forgot, bridal submit, and admin APIs by client IP. */
 export function rateLimitByIp(
   request: Request,
-  route: 'auth-login' | 'auth-register' | 'auth-forgot' | 'bridal' | 'admin',
+  route:
+    | 'auth-login'
+    | 'auth-register'
+    | 'auth-forgot'
+    | 'bridal'
+    | 'admin'
+    | 'temu-import'
+    | 'paymob-intention'
+    | 'paymob-webhook'
+    | 'bosta-webhook',
   limit?: number,
 ): void {
-  const resolvedLimit = limit ?? (route === 'admin' ? 60 : DEFAULT_LIMIT);
+  const resolvedLimit =
+    limit ??
+    (route === 'admin'
+      ? 60
+      : route === 'temu-import'
+        ? 10
+        : route === 'paymob-webhook' || route === 'bosta-webhook'
+          ? 120
+          : DEFAULT_LIMIT);
   assertRateLimit(`${route}:${getClientIp(request)}`, resolvedLimit);
 }

@@ -6,7 +6,7 @@ import type {
   AdminPromoWrite,
   AdminSettingsWrite,
 } from '@/shared/contracts/admin-config.contract';
-import type { GovernorateDTO } from '@/shared/contracts/product.contract';
+import type { AdminGovernorateDTO } from '@/shared/contracts/product.contract';
 import {
   adminBridalService,
   adminLocationsService,
@@ -68,7 +68,13 @@ export function useUpdateGovernorate() {
       input,
     }: {
       id: string;
-      input: { name?: string; zone?: GovernorateDTO['zone'] };
+      input: {
+        name?: string;
+        zone?: AdminGovernorateDTO['zone'];
+        bostaCityId?: string | null;
+        bostaZone?: string | null;
+        bostaDistrict?: string | null;
+      };
     }) => adminLocationsService.updateGovernorate(id, input),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: adminConfigKeys.governorates });

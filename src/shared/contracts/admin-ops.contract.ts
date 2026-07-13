@@ -4,6 +4,8 @@ import {
   orderStatusSchema,
   type OrderDTO,
 } from '@/shared/contracts/order.contract';
+import { savedAddressSchema } from '@/shared/contracts/account.contract';
+import { userRoleSchema } from '@/shared/contracts/auth.contract';
 import type { Paginated } from '@/shared/contracts/admin-catalog.contract';
 
 export { type Paginated };
@@ -25,15 +27,28 @@ export const adminUserDtoSchema = z.object({
   email: z.string().email(),
   name: z.string(),
   phone: z.string().optional(),
-  role: z.enum(['customer', 'admin']),
+  role: userRoleSchema,
   createdAt: z.string(),
   ordersCount: z.number().int(),
 });
 
 export type AdminUserDTO = z.infer<typeof adminUserDtoSchema>;
 
+export const adminUserFavoriteSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  image: z.string().optional(),
+});
+
 export const adminUserDetailDtoSchema = adminUserDtoSchema.extend({
+  stats: z.object({
+    ordersCount: z.number().int(),
+    totalSpent: z.number().int(),
+    lastOrderAt: z.string().nullable(),
+  }),
   recentOrders: z.array(adminOrderDtoSchema),
+  favorites: z.array(adminUserFavoriteSchema),
+  addresses: z.array(savedAddressSchema),
 });
 
 export type AdminUserDetailDTO = z.infer<typeof adminUserDetailDtoSchema>;
@@ -48,7 +63,7 @@ export const adminUserWriteSchema = z.object({
     .regex(egyptianPhone, 'Enter a valid Egyptian mobile number')
     .optional()
     .nullable(),
-  role: z.enum(['customer', 'admin']).optional(),
+  role: userRoleSchema.optional(),
 });
 
 export type AdminUserWrite = z.infer<typeof adminUserWriteSchema>;

@@ -7,6 +7,7 @@ import {
   Package,
   FolderTree,
   ShoppingBag,
+  Truck,
   Users,
   MapPin,
   Ticket,
@@ -15,24 +16,123 @@ import {
   Menu,
   X,
   LogOut,
+  Activity,
+  ImageIcon,
+  LayoutTemplate,
+  Download,
+  Layers,
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { cn } from '@/shared/utils/cn';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { useLogout } from '@/features/auth/hooks/useAuth';
 import { Button } from '@/shared/components/ui';
+import { NotificationBell } from './NotificationBell';
+import {
+  hasPermission,
+  ROLE_LABELS,
+  type Permission,
+} from '@/shared/rbac';
 
-const NAV = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-  { href: '/admin/products', label: 'Products', icon: Package },
-  { href: '/admin/categories', label: 'Categories', icon: FolderTree },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/locations', label: 'Locations', icon: MapPin },
-  { href: '/admin/promos', label: 'Promos', icon: Ticket },
-  { href: '/admin/bridal', label: 'Bridal', icon: Heart },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
-] as const;
+const NAV: ReadonlyArray<{
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+  permission: Permission;
+}> = [
+  {
+    href: '/admin',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    exact: true,
+    permission: 'dashboard:read',
+  },
+  {
+    href: '/admin/products',
+    label: 'Products',
+    icon: Package,
+    permission: 'products:read',
+  },
+  {
+    href: '/admin/import',
+    label: 'Temu import',
+    icon: Download,
+    permission: 'products:write',
+  },
+  {
+    href: '/admin/media',
+    label: 'Media',
+    icon: ImageIcon,
+    permission: 'media:write',
+  },
+  {
+    href: '/admin/categories',
+    label: 'Categories',
+    icon: FolderTree,
+    permission: 'categories:write',
+  },
+  {
+    href: '/admin/orders',
+    label: 'Orders',
+    icon: ShoppingBag,
+    permission: 'orders:read',
+  },
+  {
+    href: '/admin/shipments',
+    label: 'Shipments',
+    icon: Truck,
+    permission: 'orders:read',
+  },
+  {
+    href: '/admin/users',
+    label: 'Users',
+    icon: Users,
+    permission: 'users:read',
+  },
+  {
+    href: '/admin/locations',
+    label: 'Locations',
+    icon: MapPin,
+    permission: 'locations:write',
+  },
+  {
+    href: '/admin/promos',
+    label: 'Promos',
+    icon: Ticket,
+    permission: 'promos:write',
+  },
+  {
+    href: '/admin/bundles',
+    label: 'Bundles',
+    icon: Layers,
+    permission: 'promos:write',
+  },
+  {
+    href: '/admin/bridal',
+    label: 'Bridal',
+    icon: Heart,
+    permission: 'bridal:write',
+  },
+  {
+    href: '/admin/homepage',
+    label: 'Homepage',
+    icon: LayoutTemplate,
+    permission: 'homepage:write',
+  },
+  {
+    href: '/admin/activity',
+    label: 'Activity',
+    icon: Activity,
+    permission: 'activity:read',
+  },
+  {
+    href: '/admin/settings',
+    label: 'Settings',
+    icon: Settings,
+    permission: 'settings:write',
+  },
+];
 
 function navActive(pathname: string, href: string, exact?: boolean): boolean {
   if (exact) return pathname === href;
@@ -47,6 +147,10 @@ export function AdminSidebar({
   onClose: () => void;
 }) {
   const pathname = usePathname();
+  const user = useAuthStore((s) => s.user);
+  const items = NAV.filter(
+    (item) => user && hasPermission(user.role, item.permission),
+  );
 
   return (
     <>
@@ -82,9 +186,9 @@ export function AdminSidebar({
           </button>
         </div>
         <nav className="flex-1 space-y-0.5 overflow-y-auto p-3" aria-label="Admin">
-          {NAV.map((item) => {
+          {items.map((item) => {
             const Icon = item.icon;
-            const active = navActive(pathname, item.href, 'exact' in item && item.exact);
+            const active = navActive(pathname, item.href, item.exact);
             return (
               <Link
                 key={item.href}
@@ -125,9 +229,19 @@ export function AdminTopbar({ onMenuClick }: { onMenuClick: () => void }) {
         <Menu className="size-5" />
       </button>
       <div className="flex-1" />
-      <p className="hidden text-sm text-text-secondary sm:block">
-        {user?.name ?? user?.email}
-      </p>
+      {user && hasPermission(user.role, 'notifications:read') ? (
+        <NotificationBell />
+      ) : null}
+      <div className="hidden text-right sm:block">
+        <p className="text-sm text-text-secondary">
+          {user?.name ?? user?.email}
+        </p>
+        {user ? (
+          <p className="text-xs text-text-muted">
+            {ROLE_LABELS[user.role] ?? user.role}
+          </p>
+        ) : null}
+      </div>
       <Button
         type="button"
         variant="ghost"

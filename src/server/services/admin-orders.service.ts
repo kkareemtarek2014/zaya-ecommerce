@@ -19,8 +19,17 @@ import {
   commitSaleForOrder,
   releaseStockForOrder,
 } from '@/server/services/inventory.service';
+import {
+  getOrderTimeline,
+  recordOrderStatusChange,
+} from '@/server/services/order-timeline.service';
+import type { OrderTimelineEntry } from '@/shared/contracts/order.contract';
 
-function toAdminOrderDTO(order: OrderRow, items: OrderItemRow[]): AdminOrderDTO {
+function toAdminOrderDTO(
+  order: OrderRow,
+  items: OrderItemRow[],
+  timeline?: OrderTimelineEntry[],
+): AdminOrderDTO {
   const dto: AdminOrderDTO = {
     id: order.id,
     createdAt: order.createdAt.toISOString(),
@@ -32,6 +41,7 @@ function toAdminOrderDTO(order: OrderRow, items: OrderItemRow[]): AdminOrderDTO 
       image: i.image,
       unitPrice: i.unitPrice,
       quantity: i.quantity,
+      ...(i.isPreorder ? { isPreorder: true } : {}),
     })),
     address: {
       fullName: order.fullName,
@@ -50,6 +60,7 @@ function toAdminOrderDTO(order: OrderRow, items: OrderItemRow[]): AdminOrderDTO 
   };
   if (order.promoCode) dto.promoCode = order.promoCode;
   if (order.note) dto.note = order.note;
+  if (timeline?.length) dto.timeline = timeline;
   return dto;
 }
 
@@ -74,6 +85,9 @@ export async function listAdminOrders(url: URL) {
   const governorate = url.searchParams.get('governorate') ?? undefined;
   const dateFrom = url.searchParams.get('dateFrom');
   const dateTo = url.searchParams.get('dateTo');
+  const preorderOnly =
+    url.searchParams.get('preorder') === '1' ||
+    url.searchParams.get('preorder') === 'true';
 
   let status: OrderStatus | undefined;
   if (statusRaw) {
@@ -107,6 +121,7 @@ export async function listAdminOrders(url: URL) {
       governorate,
       dateFromMs,
       dateToMs,
+      preorderOnly,
       page,
       pageSize,
     },
@@ -127,12 +142,14 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDTO> {
   const db = await getRequestDb();
   const found = await ordersRepo.findOrderById(db, id);
   if (!found) throw new NotFoundError('Order not found');
-  return toAdminOrderDTO(found.order, found.items);
+  const timeline = await getOrderTimeline(db, id);
+  return toAdminOrderDTO(found.order, found.items, timeline);
 }
 
 export async function patchAdminOrderStatus(
   id: string,
   body: unknown,
+  actorId: string,
 ): Promise<AdminOrderDTO> {
   const parsed = adminOrderStatusPatchSchema.safeParse(body);
   if (!parsed.success) {
@@ -152,11 +169,20 @@ export async function patchAdminOrderStatus(
   }
 
   if (current === next) {
-    return toAdminOrderDTO(found.order, found.items);
+    const timeline = await getOrderTimeline(db, id);
+    return toAdminOrderDTO(found.order, found.items, timeline);
   }
 
   const updated = await ordersRepo.updateOrderStatus(db, id, next);
   if (!updated) throw new NotFoundError('Order not found');
+
+  await recordOrderStatusChange(db, {
+    orderId: id,
+    fromStatus: current,
+    toStatus: next,
+    actor: 'admin',
+    actorId,
+  });
 
   if (next === 'cancelled') {
     await releaseStockForOrder(db, id, found.items);
@@ -164,7 +190,8 @@ export async function patchAdminOrderStatus(
     await commitSaleForOrder(db, id, found.items);
   }
 
-  return toAdminOrderDTO(updated, found.items);
+  const timeline = await getOrderTimeline(db, id);
+  return toAdminOrderDTO(updated, found.items, timeline);
 }
 
 export { toAdminOrderDTO };

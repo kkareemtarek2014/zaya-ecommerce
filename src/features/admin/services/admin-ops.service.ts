@@ -9,6 +9,12 @@ import type {
 } from '@/shared/contracts/admin-ops.contract';
 import type { Paginated } from '@/shared/contracts/admin-catalog.contract';
 import type { AdminStatsDTO } from '@/shared/contracts/admin-stats.contract';
+import type {
+  AdminActivityItem,
+  AdminAuditLogDTO,
+  AdminNotificationDTO,
+} from '@/shared/contracts/admin-ops-activity.contract';
+import type { UserRole } from '@/shared/rbac';
 
 export type AdminOrderListParams = {
   page?: number;
@@ -18,13 +24,14 @@ export type AdminOrderListParams = {
   governorate?: string;
   dateFrom?: string;
   dateTo?: string;
+  preorder?: boolean;
 };
 
 export type AdminUserListParams = {
   page?: number;
   pageSize?: number;
   q?: string;
-  role?: 'customer' | 'admin';
+  role?: UserRole;
 };
 
 function toQuery(params: Record<string, string | number | undefined>): string {
@@ -47,6 +54,7 @@ export const adminOrdersService = {
         governorate: params.governorate,
         dateFrom: params.dateFrom,
         dateTo: params.dateTo,
+        preorder: params.preorder ? '1' : undefined,
       })}`,
     );
   },
@@ -94,5 +102,54 @@ export const adminUsersService = {
 export const adminStatsService = {
   get(): Promise<AdminStatsDTO> {
     return api.get('/api/admin/stats');
+  },
+};
+
+export const adminOpsService = {
+  listNotifications(params: { unreadOnly?: boolean; limit?: number } = {}) {
+    return api.get<{
+      items: AdminNotificationDTO[];
+      unreadCount: number;
+    }>(
+      `/api/admin/notifications${toQuery({
+        unreadOnly: params.unreadOnly ? 'true' : undefined,
+        limit: params.limit,
+      })}`,
+    );
+  },
+
+  markNotificationRead(id: string): Promise<{ ok: true }> {
+    return api.patch(
+      `/api/admin/notifications/${encodeURIComponent(id)}/read`,
+      {},
+    );
+  },
+
+  markAllNotificationsRead(): Promise<{ ok: true; count: number }> {
+    return api.post('/api/admin/notifications/read-all', {});
+  },
+
+  listActivity(limit = 20): Promise<AdminActivityItem[]> {
+    return api.get(`/api/admin/activity${toQuery({ limit })}`);
+  },
+
+  listAuditLog(params: {
+    page?: number;
+    pageSize?: number;
+    entity?: string;
+    actorId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  } = {}): Promise<Paginated<AdminAuditLogDTO>> {
+    return api.get(
+      `/api/admin/audit-log${toQuery({
+        page: params.page,
+        pageSize: params.pageSize,
+        entity: params.entity,
+        actorId: params.actorId,
+        dateFrom: params.dateFrom,
+        dateTo: params.dateTo,
+      })}`,
+    );
   },
 };

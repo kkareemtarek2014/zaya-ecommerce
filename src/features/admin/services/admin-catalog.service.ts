@@ -4,6 +4,10 @@ import type { ApiResponse } from '@/shared/contracts/envelope';
 import type {
   AdminCategoryDTO,
   AdminCategoryWrite,
+  AdminCsvImportReport,
+  AdminMediaDTO,
+  AdminProductBulk,
+  AdminProductBulkResult,
   AdminProductDTO,
   AdminProductWrite,
   Paginated,
@@ -81,6 +85,53 @@ export const adminCatalogService = {
 
   restoreProduct(id: string): Promise<AdminProductDTO> {
     return api.post(`/api/admin/products/${encodeURIComponent(id)}/restore`, {});
+  },
+
+  duplicateProduct(id: string): Promise<AdminProductDTO> {
+    return api.post(
+      `/api/admin/products/${encodeURIComponent(id)}/duplicate`,
+      {},
+    );
+  },
+
+  bulkProducts(input: AdminProductBulk): Promise<AdminProductBulkResult> {
+    return api.post('/api/admin/products/bulk', input);
+  },
+
+  async exportProductsCsv(): Promise<Blob> {
+    const res = await fetch('/api/admin/products/export?format=csv', {
+      credentials: 'include',
+    });
+    if (!res.ok) throw new AppError('INTERNAL', 'Export failed');
+    return res.blob();
+  },
+
+  importProductsCsv(file: File): Promise<AdminCsvImportReport> {
+    const fd = new FormData();
+    fd.set('file', file);
+    return api.postForm('/api/admin/products/import', fd);
+  },
+
+  listMedia(params: { page?: number; pageSize?: number; q?: string } = {}) {
+    const sp = new URLSearchParams();
+    if (params.page) sp.set('page', String(params.page));
+    if (params.pageSize) sp.set('pageSize', String(params.pageSize));
+    if (params.q) sp.set('q', params.q);
+    const q = sp.toString();
+    return api.get<Paginated<AdminMediaDTO>>(
+      `/api/admin/media${q ? `?${q}` : ''}`,
+    );
+  },
+
+  uploadMedia(file: File, folder?: string): Promise<AdminMediaDTO> {
+    const fd = new FormData();
+    fd.set('file', file);
+    if (folder) fd.set('folder', folder);
+    return api.postForm('/api/admin/media', fd);
+  },
+
+  deleteMedia(id: string): Promise<{ ok: true }> {
+    return api.del(`/api/admin/media/${encodeURIComponent(id)}`);
   },
 
   uploadProductImages(id: string, files: File[]): Promise<AdminProductDTO> {

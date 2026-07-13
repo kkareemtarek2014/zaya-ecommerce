@@ -24,7 +24,7 @@ export const checkoutSchema = z.object({
     .trim()
     .min(5, 'Please enter street, building and apartment'),
   notes: z.string().trim().max(300, 'Notes are too long').optional(),
-  paymentMethod: z.literal('cod'),
+  paymentMethod: z.enum(['cod', 'card', 'wallet']),
 });
 
 export type CheckoutFormValues = z.infer<typeof checkoutSchema>;

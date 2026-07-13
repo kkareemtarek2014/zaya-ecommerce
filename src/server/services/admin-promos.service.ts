@@ -13,21 +13,40 @@ import {
 } from '@/server/http/errors';
 import * as promosRepo from '@/server/repositories/promos.repo';
 import type { PromoRow } from '@/server/repositories/promos.repo';
+import * as redemptionsRepo from '@/server/repositories/promo-redemptions.repo';
 
-function toPromoDTO(row: PromoRow): AdminPromoDTO {
-  return {
+async function toPromoDTO(row: PromoRow): Promise<AdminPromoDTO> {
+  const db = await getRequestDb();
+  const timesUsed = await redemptionsRepo.countRedemptionsByCode(db, row.code);
+  const discountTotal = await redemptionsRepo.sumDiscountByCode(db, row.code);
+  const revenueTotal = await redemptionsRepo.sumOrderRevenueByCode(
+    db,
+    row.code,
+  );
+  const remaining =
+    row.maxRedemptions != null
+      ? Math.max(0, row.maxRedemptions - timesUsed)
+      : null;
+
+  const dto: AdminPromoDTO = {
     code: row.code,
     type: row.type,
     value: row.value,
-    ...(row.minOrderValue != null ? { minOrderValue: row.minOrderValue } : {}),
     active: row.active,
+    timesUsed,
+    remaining,
+    discountTotal,
+    revenueTotal,
   };
+  if (row.minOrderValue != null) dto.minOrderValue = row.minOrderValue;
+  if (row.maxRedemptions != null) dto.maxRedemptions = row.maxRedemptions;
+  return dto;
 }
 
 export async function listAdminPromos(): Promise<AdminPromoDTO[]> {
   const db = await getRequestDb();
   const rows = await promosRepo.findAllPromos(db);
-  return rows.map(toPromoDTO);
+  return Promise.all(rows.map((r) => toPromoDTO(r)));
 }
 
 export async function createAdminPromo(raw: unknown): Promise<AdminPromoDTO> {
@@ -44,6 +63,7 @@ export async function createAdminPromo(raw: unknown): Promise<AdminPromoDTO> {
     type: parsed.data.type,
     value: parsed.data.value,
     minOrderValue: parsed.data.minOrderValue,
+    maxRedemptions: parsed.data.maxRedemptions,
     active: parsed.data.active ?? true,
   });
   return toPromoDTO(row);

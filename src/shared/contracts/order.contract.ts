@@ -32,6 +32,7 @@ export const orderItemDtoSchema = z.object({
   image: z.string(),
   unitPrice: z.number().int(),
   quantity: z.number().int(),
+  isPreorder: z.boolean().optional(),
 });
 
 export const orderStatusSchema = z.enum([
@@ -43,6 +44,27 @@ export const orderStatusSchema = z.enum([
   'delivered',
   'cancelled',
 ]);
+
+export type OrderStatus = z.infer<typeof orderStatusSchema>;
+
+export const orderTimelineActorSchema = z.enum([
+  'admin',
+  'system',
+  'paymob',
+  'bosta',
+]);
+
+export const orderTimelineEntrySchema = z.object({
+  id: z.string(),
+  fromStatus: orderStatusSchema.nullable().optional(),
+  toStatus: orderStatusSchema,
+  actor: orderTimelineActorSchema,
+  actorId: z.string().nullable().optional(),
+  note: z.string().nullable().optional(),
+  createdAt: z.string(),
+});
+
+export type OrderTimelineEntry = z.infer<typeof orderTimelineEntrySchema>;
 
 export const orderDtoSchema = z.object({
   id: z.string(),
@@ -58,6 +80,7 @@ export const orderDtoSchema = z.object({
   total: z.number().int(),
   promoCode: z.string().optional(),
   note: z.string().optional(),
+  timeline: z.array(orderTimelineEntrySchema).optional(),
   tracking: z
     .object({
       number: z.string(),

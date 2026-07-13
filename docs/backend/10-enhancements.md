@@ -21,7 +21,7 @@ it's confirmed and extended to a viewable UI).
 `P16` Catalog depth · `P17` Inventory ⭐ · `P18` Order timeline ⭐ + notifications + activity feed ·
 `P19` Bulk ⭐ + duplication ⭐ + CSV + media library + rich text + better search ·
 `P20` Customer 360 + coupon usage + dashboard analytics + expanded settings ·
-`P21` RBAC roles/permissions · `P22` Automation (Cron Triggers) · `P23` Homepage builder (future).
+`P21` RBAC roles/permissions · `P22` Automation (Cron Triggers) · `P23` Homepage builder (flagged).
 
 ---
 
@@ -42,12 +42,12 @@ derived `inStock`; disable add-to-bag when available ≤ 0.
 
 ## 2. ⭐ Order timeline / status history  *(P18)*
 **What:** keep every status transition, not just the current one.
-**Data model:** **`order_status_history`** table: `id, order_id, from_status?, to_status, actor_id?
-(admin|system|paymob|bosta), note?, created_at`. (See `02` §2.18.) Write a row on every status change
-(checkout, admin, Paymob webhook, Bosta webhook).
-**API/admin:** `GET /api/admin/orders/[id]` returns `timeline[]`; order detail renders a vertical
-timeline (Created → Payment Received → Packed → Shipped → Delivered …). The storefront
-`OrderStatusTimeline` component already exists — feed it from this table.
+**Data model:** **`order_status_history`** table: `id, order_id, from_status?, to_status, actor
+(admin|system|paymob|bosta), actor_id?, note?, created_at`. (See `02` §2.18.) Write a row on every
+status change (checkout, admin, later Paymob/Bosta webhooks).
+**API/admin:** order DTOs include `timeline[]`; order detail renders a vertical event timeline.
+Storefront `OrderStatusTimeline` consumes `timeline` when present (falls back to step UI from
+`currentStatus`).
 
 ## 3. Dashboard analytics  *(P20)*
 **What:** richer KPIs beyond counts.
@@ -84,10 +84,10 @@ but not listed; `archived` = soft-deleted (see §15). Checkout requires `publish
 gets row checkboxes + a bulk toolbar + confirm dialog.
 
 ## 8. CSV import / export  *(P19)*
-**What:** manage catalog/orders/customers in a spreadsheet.
-**API/admin:** `GET /api/admin/products/export?format=csv` (also orders, customers); `POST
-/api/admin/products/import` (multipart CSV) → validates rows against the product contract, upserts by
-SKU/slug, returns a row-level report (created/updated/errors). Import runs as `draft` by default.
+**What:** manage catalog in a spreadsheet (orders/customers export can follow later).
+**API/admin:** `GET /api/admin/products/export?format=csv`; `POST /api/admin/products/import`
+(multipart CSV) → validates rows against the product contract, upserts by SKU/slug, returns a
+row-level report (created/updated/errors). Import runs as `draft` by default.
 
 ## 9. Better search  *(P19)*
 **What:** admin search across SKU, category, tags, description — not just name.
@@ -98,9 +98,9 @@ the **storefront** search stays as-is (name/category/tags).
 ## 10. Dashboard notifications  *(P18)*
 **What:** a bell with New Order, Low Stock, Payment Failed, New Bridal Request.
 **Data model:** **`notifications`** table: `id, type, title, body, entity, entity_id, read(bool),
-created_at`. Written by the same events that drive them (order create, stock cross threshold, payment
-webhook fail, bridal submit). **API/admin:** `GET /api/admin/notifications`, `PATCH .../[id]/read`,
-`POST .../read-all`. (Live push is out of scope; poll on an interval.)
+created_at`. Written by order create, stock crossing the low-stock threshold, bridal submit, and (later)
+payment webhook fail. **API/admin:** `GET /api/admin/notifications`, `PATCH .../[id]/read`,
+`POST .../read-all`. Poll on an interval; no live push. `payment_failed` writers land with Paymob (P13).
 
 ## 11. Media library  *(P19)*
 **What:** reuse uploaded images instead of re-uploading.
@@ -110,11 +110,10 @@ alt?, folder?, uploaded_by, created_at`. Product/category image pickers select f
 `DELETE /api/admin/media/[id]` (guard if referenced). Existing R2 flow (`08` §7) feeds this.
 
 ## 12. Rich text product description  *(P19)*
-**What:** bold/lists/links/images in descriptions.
-**Data model:** store sanitized HTML (or a portable JSON/Markdown) in `products.description`; add
-`description_format` (`plain|html`). **Rule:** sanitize on write (server-side allow-list) and render
-safely on the storefront. Admin uses a lightweight editor component. No storefront layout change beyond
-rendering formatted copy.
+**What:** bold/lists/links in descriptions (lightweight — no heavy editor package).
+**Data model:** `products.description` + `description_format` (`plain|html`) — column already present
+from P16. **Rule:** sanitize on write (server-side allow-list) and render safely on the storefront.
+Admin toggles format + edits HTML/plain in the product form.
 
 ## 13. Customer 360 (customer details)  *(P20)*
 **What:** each customer page shows total orders, total spent, last order, favorite products, addresses.
@@ -136,13 +135,12 @@ already-archived product hard-deletes (or `CONFLICT` if referenced). `POST
 /api/admin/products/[id]/restore` → `draft` and clear `archived_at`. Order history keeps referencing
 archived products safely.
 
-## 16. ⭐ Audit log  *(already specced — confirm + surface)*
-**What:** every admin mutation recorded with actor + before/after; viewable in the dashboard.
-**Data model:** **already defined** in `02` §2.16 (`audit_log`). This adds the **viewer**: `GET
-/api/admin/audit-log` (filter by actor/entity/date, paginated) + an admin page. Every enhancement
-endpoint writes an audit row.
+## 16. ⭐ Audit log  *(P18 viewer — writes already land in P12)*
+**What:** every admin mutation recorded with actor + meta; viewable in the dashboard.
+**Data model:** **already defined** in `02` §2.16 (`audit_log`). P18 adds the **viewer**:
+`GET /api/admin/audit-log` (filter by actor/entity/date, paginated) + `/admin/activity`.
 
-## 17. Homepage builder  *(P23 — future)*
+## 17. Homepage builder  *(P23 — flagged `homepage_builder`)*
 **What:** manage Hero, Featured, New Arrivals, Collections, Promotion banners from the dashboard.
 **Data model:** **`homepage_blocks`** table: `id, type(hero|featured|new_arrivals|collection|promo),
 position, config(json), active, created_at`. **API/admin:** CRUD + reorder; the home page renders blocks
@@ -167,7 +165,8 @@ items check the actor's permissions. Guard the last full **Admin** from demotion
 ## 20. Activity dashboard (feed)  *(P18)*
 **What:** a recent-activity stream ("Ahmed added Product X", "Mona updated Order #105").
 **Data model:** derived from **`audit_log`** (§16) — no new table; render a friendly, grouped-by-day
-feed. **API/admin:** `GET /api/admin/activity` (a formatted view over `audit_log`) on the dashboard.
+feed. **API/admin:** `GET /api/admin/activity` (formatted view over `audit_log`) on the dashboard +
+`/admin/activity` page (shares the audit-log viewer).
 
 ---
 
@@ -195,7 +194,7 @@ The last two jobs belong to the sourcing/pricing spec (`11`) but run through the
 - `products`: `+ slug (unique), sku, status(draft|published|hidden|archived), stock_qty, reserved_qty,
   seo_title, seo_description, og_image, canonical_url, description_format, archived_at`.
 - New tables: `inventory_movements`, `order_status_history`, `notifications`, `media_assets`,
-  `promo_redemptions`, `product_views`, `homepage_blocks` (future), optional `role_permissions`.
+  `promo_redemptions`, `product_views`, `homepage_blocks`, optional `role_permissions`.
 - `users.role` enum expanded (RBAC); `promos.max_redemptions?`.
 - `audit_log` already exists (`02` §2.16); reused for §16 + §20.
 

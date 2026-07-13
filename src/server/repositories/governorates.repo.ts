@@ -28,9 +28,23 @@ export async function findGovernorateById(
 
 export async function insertGovernorate(
   db: Db,
-  input: { id: string; name: string; zone: GovernorateRow['zone'] },
+  input: {
+    id: string;
+    name: string;
+    zone: GovernorateRow['zone'];
+    bostaCityId?: string | null;
+    bostaZone?: string | null;
+    bostaDistrict?: string | null;
+  },
 ): Promise<GovernorateRow> {
-  await db.insert(governorates).values(input);
+  await db.insert(governorates).values({
+    id: input.id,
+    name: input.name,
+    zone: input.zone,
+    bostaCityId: input.bostaCityId ?? null,
+    bostaZone: input.bostaZone ?? null,
+    bostaDistrict: input.bostaDistrict ?? null,
+  });
   const row = await findGovernorateById(db, input.id);
   if (!row) throw new Error('Failed to create governorate');
   return row;
@@ -39,11 +53,22 @@ export async function insertGovernorate(
 export async function updateGovernorate(
   db: Db,
   id: string,
-  input: { name?: string; zone?: GovernorateRow['zone'] },
+  input: {
+    name?: string;
+    zone?: GovernorateRow['zone'];
+    bostaCityId?: string | null;
+    bostaZone?: string | null;
+    bostaDistrict?: string | null;
+  },
 ): Promise<GovernorateRow | null> {
   const patch: Partial<typeof governorates.$inferInsert> = {};
   if (input.name !== undefined) patch.name = input.name;
   if (input.zone !== undefined) patch.zone = input.zone;
+  if (input.bostaCityId !== undefined) patch.bostaCityId = input.bostaCityId;
+  if (input.bostaZone !== undefined) patch.bostaZone = input.bostaZone;
+  if (input.bostaDistrict !== undefined) {
+    patch.bostaDistrict = input.bostaDistrict;
+  }
   if (Object.keys(patch).length === 0) return findGovernorateById(db, id);
   await db.update(governorates).set(patch).where(eq(governorates.id, id));
   return findGovernorateById(db, id);
