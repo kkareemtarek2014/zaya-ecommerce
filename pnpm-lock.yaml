@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  server-only:
+    hash: 91f070c1512a96b4494f0fdb844414b1428288ae3a7a2a32a9eaaf84dec50727
+    path: patches/server-only.patch
+
 importers:
 
   .:
@@ -40,7 +45,7 @@ importers:
         version: 7.81.0(react@19.2.7)
       server-only:
         specifier: ^0.0.1
-        version: 0.0.1
+        version: 0.0.1(patch_hash=91f070c1512a96b4494f0fdb844414b1428288ae3a7a2a32a9eaaf84dec50727)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -7215,7 +7220,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  server-only@0.0.1: {}
+  server-only@0.0.1(patch_hash=91f070c1512a96b4494f0fdb844414b1428288ae3a7a2a32a9eaaf84dec50727): {}
 
   set-function-length@1.2.2:
     dependencies:
