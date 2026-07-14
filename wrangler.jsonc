@@ -2,6 +2,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"main": "src/cloudflare-worker.ts",
 	"name": "zaya-ecommerce",
+	"account_id": "234bbe4f0cdb3006705781688c9660d8",
 	"minify": true,
 	"compatibility_date": "2026-07-12",
 	"compatibility_flags": [
@@ -22,8 +23,6 @@
 	},
 	"services": [
 		{
-			// Self-reference service binding, the service name must match the worker name
-			// see https://opennext.js.org/cloudflare/caching
 			"binding": "WORKER_SELF_REFERENCE",
 			"service": "zaya-ecommerce"
 		}

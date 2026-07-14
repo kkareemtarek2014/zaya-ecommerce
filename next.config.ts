@@ -12,9 +12,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
   images: {
     // Product placeholders are local SVGs until the real catalog API is wired.
     dangerouslyAllowSVG: true,
