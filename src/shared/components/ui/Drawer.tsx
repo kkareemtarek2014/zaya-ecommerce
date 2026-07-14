@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useId, type ReactNode } from 'react';
+import { useRef, useId, useState, useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/shared/utils/cn';
@@ -25,11 +25,25 @@ export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
   const titleId = useId();
   const mounted = useHydrated();
 
+  const [shouldRender, setShouldRender] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+    } else {
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 300); // matches transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
   useFocusTrap(containerRef, isOpen);
   useScrollLock(isOpen);
   useEscapeKey(isOpen, onClose);
 
   if (!mounted || typeof document === 'undefined') return null;
+  if (!shouldRender && !isOpen) return null;
 
   return createPortal(
     <div
@@ -38,6 +52,7 @@ export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
         isOpen ? 'pointer-events-auto' : 'pointer-events-none',
       )}
       aria-hidden={!isOpen}
+      {...(!isOpen ? { inert: true } : {})}
     >
       {/* Backdrop */}
       <div
