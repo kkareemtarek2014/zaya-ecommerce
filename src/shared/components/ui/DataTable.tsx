@@ -40,7 +40,7 @@ export function DataTable<T>({
         className,
       )}
     >
-      <table className="w-full min-w-[36rem] text-left text-sm">
+      <table className="w-full min-w-xl text-left text-sm">
         <thead className="border-b border-border bg-brand-blush/40 text-text-secondary">
           <tr>
             {columns.map((col) => (

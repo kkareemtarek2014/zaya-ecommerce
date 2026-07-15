@@ -25,7 +25,7 @@ export function MyWallet() {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-2xl border border-border bg-gradient-to-br from-brand-blush to-surface-primary p-8 shadow-sm">
+      <div className="rounded-2xl border border-border bg-linear-to-br from-brand-blush to-surface-primary p-8 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-surface-primary text-brand-primary shadow-sm">
             <Wallet className="size-6" />
@@ -34,7 +34,7 @@ export function MyWallet() {
             <p className="text-sm font-medium text-text-secondary">
               Current Balance
             </p>
-            <p className="font-(family-name:--font-display) text-4xl font-semibold text-text-primary">
+            <p className="font-display text-4xl font-semibold text-text-primary">
               {formatEGP(balance)}
             </p>
           </div>
@@ -42,7 +42,7 @@ export function MyWallet() {
       </div>
 
       <div>
-        <h2 className="font-(family-name:--font-display) text-xl font-bold mb-4">
+        <h2 className="font-display text-xl font-bold mb-4">
           Transaction History
         </h2>
         {transactions.length === 0 ? (

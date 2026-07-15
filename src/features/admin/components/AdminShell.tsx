@@ -196,7 +196,7 @@ export function AdminSidebar({
         <div className="flex h-14 items-center justify-between border-b border-border px-4">
           <Link
             href="/admin"
-            className="font-(family-name:--font-display) text-xl font-bold italic text-brand-primary"
+            className="font-display text-xl font-bold italic text-brand-primary"
             onClick={onClose}
           >
             Zaya Admin

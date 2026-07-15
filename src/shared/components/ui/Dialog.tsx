@@ -69,7 +69,7 @@ export function Dialog({
         <div className="flex items-start justify-between gap-3">
           <h2
             id={titleId}
-            className="font-(family-name:--font-display) text-xl font-semibold text-text-primary"
+            className="font-display text-xl font-semibold text-text-primary"
           >
             {title}
           </h2>

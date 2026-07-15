@@ -30,9 +30,9 @@ export function MediaPicker({ open, onClose, onSelect }: MediaPickerProps) {
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
-      <div className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-(--radius-lg) border border-border bg-surface-raised p-4 shadow-lg">
+      <div className="relative z-10 flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg border border-border bg-surface-raised p-4 shadow-lg">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-(family-name:--font-display) text-lg font-semibold">
+          <h2 className="font-display text-lg font-semibold">
             Media library
           </h2>
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>

@@ -34,7 +34,7 @@ export function Loader({ fullscreen = true, className }: LoaderProps = {}) {
           <Sparkles className="h-6 w-6 text-brand-primary animate-pop" style={{ animationIterationCount: 'infinite', animationDuration: '2s' }} />
         </div>
       </div>
-      <p className="font-(family-name:--font-display) text-sm font-medium tracking-widest text-text-muted animate-pulse uppercase">
+      <p className="font-display text-sm font-medium tracking-widest text-text-muted animate-pulse uppercase">
         Curating elegance
       </p>
     </div>

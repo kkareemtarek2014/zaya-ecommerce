@@ -34,7 +34,7 @@ export default function AdminSettingsPage() {
       <AdminBreadcrumbs
         items={[{ label: 'Admin', href: '/admin' }, { label: 'Settings' }]}
       />
-      <h1 className="font-(family-name:--font-display) text-3xl font-semibold text-text-primary">
+      <h1 className="font-display text-3xl font-semibold text-text-primary">
         Settings
       </h1>
       <p className="mt-1 text-sm text-text-secondary">

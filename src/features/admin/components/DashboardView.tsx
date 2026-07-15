@@ -26,7 +26,7 @@ export function DashboardView() {
       <AdminBreadcrumbs
         items={[{ label: 'Admin', href: '/admin' }, { label: 'Dashboard' }]}
       />
-      <h1 className="font-(family-name:--font-display) text-3xl font-semibold text-text-primary">
+      <h1 className="font-display text-3xl font-semibold text-text-primary">
         Dashboard
       </h1>
       <p className="mt-1 text-sm text-text-secondary">
@@ -104,8 +104,8 @@ export function DashboardView() {
             })}
           </div>
 
-          <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
-            <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+          <section className="rounded-lg border border-border bg-surface-raised p-5">
+            <h2 className="font-display text-lg font-semibold text-text-primary">
               Sales (14 days)
             </h2>
             <p className="mt-1 text-xs text-text-muted">
@@ -117,8 +117,8 @@ export function DashboardView() {
           </section>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
-              <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+            <section className="rounded-lg border border-border bg-surface-raised p-5">
+              <h2 className="font-display text-lg font-semibold text-text-primary">
                 Best sellers
               </h2>
               <ul className="mt-4 divide-y divide-border">
@@ -144,8 +144,8 @@ export function DashboardView() {
                 )}
               </ul>
             </section>
-            <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
-              <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+            <section className="rounded-lg border border-border bg-surface-raised p-5">
+              <h2 className="font-display text-lg font-semibold text-text-primary">
                 Most viewed
               </h2>
               <ul className="mt-4 divide-y divide-border">
@@ -171,8 +171,8 @@ export function DashboardView() {
                 )}
               </ul>
             </section>
-            <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
-              <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+            <section className="rounded-lg border border-border bg-surface-raised p-5">
+              <h2 className="font-display text-lg font-semibold text-text-primary">
                 Top categories
               </h2>
               <ul className="mt-4 divide-y divide-border">
@@ -198,9 +198,9 @@ export function DashboardView() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
+            <section className="rounded-lg border border-border bg-surface-raised p-5">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+                <h2 className="font-display text-lg font-semibold text-text-primary">
                   Recent orders
                 </h2>
                 <Link
@@ -215,9 +215,9 @@ export function DashboardView() {
               </div>
             </section>
 
-            <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
+            <section className="rounded-lg border border-border bg-surface-raised p-5">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+                <h2 className="font-display text-lg font-semibold text-text-primary">
                   Latest products
                 </h2>
                 <Link
@@ -233,10 +233,10 @@ export function DashboardView() {
             </section>
           </div>
 
-          <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
+          <section className="rounded-lg border border-border bg-surface-raised p-5">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+                <h2 className="font-display text-lg font-semibold text-text-primary">
                   Low stock
                 </h2>
                 <p className="mt-1 text-xs text-text-muted">
@@ -282,9 +282,9 @@ export function DashboardView() {
             </div>
           </section>
 
-          <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
+          <section className="rounded-lg border border-border bg-surface-raised p-5">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+              <h2 className="font-display text-lg font-semibold text-text-primary">
                 Recent activity
               </h2>
               <Link

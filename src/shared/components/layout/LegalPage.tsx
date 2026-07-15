@@ -13,7 +13,7 @@ export function LegalPage({
   return (
     <div className="mx-auto max-w-container px-4 py-12 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <h1 className="font-(family-name:--font-display) text-3xl font-semibold lg:text-4xl">
+        <h1 className="font-display text-3xl font-semibold lg:text-4xl">
           {title}
         </h1>
         <p className="mt-2 text-sm text-text-muted">Last updated: {updated}</p>

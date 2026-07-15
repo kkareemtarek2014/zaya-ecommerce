@@ -30,8 +30,8 @@ export function CronJobsPanel({ lastRuns }: CronJobsPanelProps) {
   const [running, setRunning] = useState<AdminJobName | null>(null);
 
   return (
-    <section className="mt-10 max-w-xl rounded-(--radius-lg) border border-border bg-surface-raised p-5">
-      <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+    <section className="mt-10 max-w-xl rounded-lg border border-border bg-surface-raised p-5">
+      <h2 className="font-display text-lg font-semibold text-text-primary">
         Cron jobs
       </h2>
       <p className="mt-1 text-xs text-text-muted">

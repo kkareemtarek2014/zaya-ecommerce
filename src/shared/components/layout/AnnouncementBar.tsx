@@ -84,7 +84,7 @@ export function AnnouncementBar({ items }: AnnouncementBarProps) {
           current.href.startsWith('/') ? (
             <Link
               href={current.href}
-              className="block transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-inverse"
+              className="block transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-inverse"
             >
               {content}
             </Link>
@@ -93,7 +93,7 @@ export function AnnouncementBar({ items }: AnnouncementBarProps) {
               href={current.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="block transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-inverse"
+              className="block transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-inverse"
             >
               {content}
             </a>

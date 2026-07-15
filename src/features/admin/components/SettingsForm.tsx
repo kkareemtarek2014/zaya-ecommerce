@@ -142,7 +142,7 @@ function AnnouncementRowsEditor({
         {items.map((item, index) => (
           <li
             key={item.id}
-            className="space-y-2 rounded-(--radius-lg) border border-border bg-surface-raised p-3"
+            className="space-y-2 rounded-lg border border-border bg-surface-raised p-3"
           >
             <div className="flex flex-wrap items-center gap-2">
               <label className="flex items-center gap-2 text-sm text-text-secondary">
@@ -467,7 +467,7 @@ export function SettingsForm({
             {...register('siteUrl')}
           />
           <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[12rem] flex-1">
+            <div className="min-w-48 flex-1">
               <Input
                 label="Logo URL"
                 error={errors.logoUrl?.message}
@@ -492,7 +492,7 @@ export function SettingsForm({
             />
           ) : null}
           <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[12rem] flex-1">
+            <div className="min-w-48 flex-1">
               <Input
                 label="Favicon URL"
                 error={errors.faviconUrl?.message}
@@ -681,7 +681,7 @@ export function SettingsForm({
           </p>
         </fieldset>
 
-        <label className="flex items-start gap-3 rounded-(--radius-lg) border border-border bg-brand-blush/20 px-4 py-3 text-sm">
+        <label className="flex items-start gap-3 rounded-lg border border-border bg-brand-blush/20 px-4 py-3 text-sm">
           <input
             type="checkbox"
             className="mt-0.5 size-4 accent-brand-primary"
@@ -698,7 +698,7 @@ export function SettingsForm({
           </span>
         </label>
 
-        <fieldset className="space-y-3 rounded-(--radius-lg) border border-border bg-brand-blush/10 p-4">
+        <fieldset className="space-y-3 rounded-lg border border-border bg-brand-blush/10 p-4">
           <legend className="px-1 text-sm font-semibold text-text-primary">
             Bridal page
           </legend>

@@ -65,7 +65,7 @@ export function WishlistButton({
     >
       <Heart
         className={cn(
-          'size-[18px] transition-all',
+          'size-4.5 transition-all',
           active
             ? 'animate-pop fill-brand-primary text-brand-primary'
             : 'fill-transparent',

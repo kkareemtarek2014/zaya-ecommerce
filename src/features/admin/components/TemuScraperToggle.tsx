@@ -35,10 +35,10 @@ export function TemuScraperToggle() {
   }
 
   return (
-    <section className="rounded-(--radius-lg) border border-border bg-surface-raised p-5">
+    <section className="rounded-lg border border-border bg-surface-raised p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h2 className="font-(family-name:--font-display) text-lg font-semibold text-text-primary">
+          <h2 className="font-display text-lg font-semibold text-text-primary">
             Temu scraper
           </h2>
           <p className="mt-1 text-sm text-text-secondary">

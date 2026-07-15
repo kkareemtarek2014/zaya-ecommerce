@@ -50,7 +50,7 @@ export function StockPanel({ product }: StockPanelProps) {
   return (
     <section className="mt-10 max-w-xl space-y-4 rounded-(--radius) border border-border p-4">
       <div>
-        <h2 className="font-(family-name:--font-display) text-xl font-semibold text-text-primary">
+        <h2 className="font-display text-xl font-semibold text-text-primary">
           Inventory
         </h2>
         <p className="mt-1 text-sm text-text-secondary">
