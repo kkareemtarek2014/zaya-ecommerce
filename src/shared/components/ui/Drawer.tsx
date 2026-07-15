@@ -14,13 +14,20 @@ export interface DrawerProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  /** Slide-in edge. Defaults to `right` (cart). Use `left` for mobile nav. */
+  side?: 'left' | 'right';
 }
 
 /**
- * Right-side slide-in panel (bottom sheet feel on mobile widths is kept
- * simple: full-width panel). Portal to body, focus trap, scroll lock, Esc.
+ * Slide-in panel with overlay. Portal to body, focus trap, scroll lock, Esc.
  */
-export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
+export function Drawer({
+  isOpen,
+  onClose,
+  title,
+  children,
+  side = 'right',
+}: DrawerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const mounted = useHydrated();
@@ -75,8 +82,13 @@ export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          'absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-surface-raised shadow-2xl transition-transform duration-300 ease-out',
-          isOpen ? 'translate-x-0' : 'translate-x-full',
+          'absolute top-0 flex h-full w-full flex-col bg-surface-raised shadow-2xl transition-transform duration-300 ease-out',
+          side === 'left' ? 'left-0 max-w-sm' : 'right-0 max-w-md',
+          isOpen
+            ? 'translate-x-0'
+            : side === 'left'
+              ? '-translate-x-full'
+              : 'translate-x-full',
         )}
       >
         <div className="flex items-center justify-between border-b border-border px-5 py-4">

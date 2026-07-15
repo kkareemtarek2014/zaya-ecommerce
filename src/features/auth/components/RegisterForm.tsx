@@ -43,11 +43,12 @@ export function RegisterForm() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 lg:px-0">
-      <div className="flex flex-col gap-5 rounded-(--radius-lg) border border-border bg-surface-raised px-5 py-6 shadow-sm md:px-8">
-        <h1 className="w-full border-b border-border pb-5 text-center font-(family-name:--font-display) text-2xl font-semibold text-text-primary">
+    <div className="mx-auto w-full max-w-xl px-4 lg:px-0">
+      <div className="flex flex-col gap-5 rounded-lg border border-border bg-surface-raised px-5 py-6 shadow-sm md:px-8">
+        <h1 className="w-full border-b border-border pb-5 text-center font-display text-2xl font-semibold text-text-primary">
           Create Account
         </h1>
+
 
         {formError && (
           <div className="rounded-(--radius) border border-status-error/30 bg-status-error/10 p-3 text-center text-sm text-status-error">
@@ -116,7 +117,8 @@ export function RegisterForm() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute end-3 top-1/2 -translate-y-1/2 text-text-muted transition-colors hover:text-text-secondary"
+                className="absolute inset-e-3 top-1/2 -translate-y-1/2 text-text-muted transition-colors hover:text-text-secondary"
+
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
