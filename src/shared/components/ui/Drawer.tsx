@@ -27,10 +27,14 @@ export function Drawer({ isOpen, onClose, title, children }: DrawerProps) {
 
   const [shouldRender, setShouldRender] = useState(isOpen);
 
+  // Render-phase adjustment (React's "derive state from props" pattern) —
+  // avoids a synchronous setState inside an effect.
+  if (isOpen && !shouldRender) {
+    setShouldRender(true);
+  }
+
   useEffect(() => {
-    if (isOpen) {
-      setShouldRender(true);
-    } else {
+    if (!isOpen) {
       const timer = setTimeout(() => {
         setShouldRender(false);
       }, 300); // matches transition duration

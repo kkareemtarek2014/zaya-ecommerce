@@ -1,5 +1,4 @@
 import type { NextConfig } from 'next';
-import path from 'path';
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
