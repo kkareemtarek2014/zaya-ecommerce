@@ -61,31 +61,31 @@ function slugify(name: string): string {
 const SEED_REVIEWS = [
   {
     id: 'rev_1',
-    productId: 'p-001',
+    productId: 'sq-005',
     authorName: 'Sarah M.',
     rating: 5,
     comment:
-      'Absolutely love this piece! The quality is amazing and it looks exactly like the pictures. I got so many compliments wearing it to a wedding.',
+      'The glow is even better than the videos! I keep it on my nightstand and squeeze it while winding down — weirdly effective at ending the day calmer. Super soft and rises back slowly.',
     helpful: 12,
     createdAt: new Date(Date.now() - 86400000 * 60),
   },
   {
     id: 'rev_2',
-    productId: 'p-001',
-    authorName: 'Nour T.',
+    productId: 'sq-005',
+    authorName: 'Omar T.',
     rating: 4,
     comment:
-      'Beautiful design and very elegant. It arrived perfectly packaged too. My only small issue is that the clasp is a bit tricky to handle alone.',
+      'Bought it for my desk at work and it survived exam-season levels of squeezing. Great quality, no smell. Only wish it was a bit bigger — getting the jumbo next.',
     helpful: 5,
     createdAt: new Date(Date.now() - 86400000 * 21),
   },
   {
     id: 'rev_3',
-    productId: 'p-001',
+    productId: 'sq-005',
     authorName: 'Amina S.',
     rating: 5,
     comment:
-      'Perfect gift for my sister. The delivery was super fast to Alex and the customer service was very helpful when I had a question.',
+      'Perfect gift for my sister before her finals. Delivery to Alex was fast and the little calm-ritual card in the box was such a nice touch.',
     helpful: 0,
     createdAt: new Date(),
   },
@@ -177,7 +177,8 @@ async function main() {
     await insertChunks(
       (rows) => db.insert(governorates).values(rows).onConflictDoNothing(),
       governorateRows,
-      20,
+      // 6 columns/row → keep rows × cols under D1's 100-variable limit
+      15,
     );
 
     await db
@@ -216,7 +217,7 @@ async function main() {
         value: [
           {
             id: 'new-drop',
-            text: 'New drop every week',
+            text: 'New squishy drop every month 🌙',
             href: '/shop',
             active: true,
             sortOrder: 0,
@@ -287,7 +288,10 @@ async function main() {
       )
       .onConflictDoNothing();
 
-    const productReviews = SEED_REVIEWS.filter((r) => r.productId === 'p-001');
+    const reviewedProductId = SEED_REVIEWS[0]!.productId;
+    const productReviews = SEED_REVIEWS.filter(
+      (r) => r.productId === reviewedProductId,
+    );
     const avg =
       productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length;
     await db
@@ -296,7 +300,7 @@ async function main() {
         rating: Math.round(avg * 10) / 10,
         reviewCount: productReviews.length,
       })
-      .where(eq(products.id, 'p-001'));
+      .where(eq(products.id, reviewedProductId));
 
     await db
       .insert(walletTransactions)

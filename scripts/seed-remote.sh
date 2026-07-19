@@ -28,15 +28,8 @@ TABLES=(
 )
 
 echo "→ Re-seeding local DB (clean baseline)…"
-# Clear app tables locally so export matches seed.ts only (ignore errors if empty)
-pnpm exec wrangler d1 execute zaya-db --local --yes --command \
-  "PRAGMA foreign_keys=OFF;
-   DELETE FROM order_items; DELETE FROM orders; DELETE FROM bridal_requests;
-   DELETE FROM favorites; DELETE FROM addresses; DELETE FROM reviews;
-   DELETE FROM wallet_transactions; DELETE FROM sessions;
-   DELETE FROM products; DELETE FROM users; DELETE FROM promos;
-   DELETE FROM settings; DELETE FROM shipping_zones; DELETE FROM governorates;
-   DELETE FROM categories; PRAGMA foreign_keys=ON;" 2>/dev/null || true
+# Clear app tables locally so export matches seed.ts only (FK-safe child-first order)
+bash "${ROOT}/scripts/db-wipe.sh" --local
 
 pnpm db:seed
 
