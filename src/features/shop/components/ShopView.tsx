@@ -158,8 +158,11 @@ export function ShopView({ category }: { category?: string }) {
         </p>
       ) : null}
 
-      {/* M-11 sticky toolbar — mobile */}
-      <div className="sticky top-16 z-30 -mx-4 mt-4 border-b border-border bg-surface/95 px-4 py-2 backdrop-blur sm:hidden">
+      {/* M-11 sticky toolbar — mobile. Offset must match the sticky header's
+          real height (4rem + notch inset from `pt-[env(safe-area-inset-top)]`
+          in Header.tsx), or this bar sticks partly hidden under the header on
+          notched iPhones. */}
+      <div className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-30 -mx-4 mt-4 border-b border-border bg-surface/95 px-4 py-2 backdrop-blur sm:hidden">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <CategoryPills active={category} />
