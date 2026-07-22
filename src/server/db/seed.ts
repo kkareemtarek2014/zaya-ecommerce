@@ -212,6 +212,8 @@ async function main() {
       { key: 'site_name', value: SITE.name, updatedAt: now },
       { key: 'site_tagline', value: SITE.tagline, updatedAt: now },
       { key: 'site_url', value: SITE.url, updatedAt: now },
+      // Egyptian mobile, wa.me format: leading 0 dropped, country code 20 prepended.
+      { key: 'whatsapp_number', value: '201090313619', updatedAt: now },
       {
         key: 'announcement_items',
         value: [
