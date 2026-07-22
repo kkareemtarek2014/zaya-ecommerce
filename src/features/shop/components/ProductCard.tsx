@@ -94,21 +94,21 @@ function ProductCardComponent({ product }: { product: Product }) {
           </h3>
         </Link>
 
-        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-x-2 gap-y-2 pt-1">
           <div className="flex flex-col">
             {onSale ? (
               <span className="text-xs text-text-muted line-through">
                 {formatEGP(product.compareAtPrice!)}
               </span>
             ) : null}
-            <span className="font-display text-lg font-semibold text-brand-primary">
+            <span className="font-display text-lg font-semibold whitespace-nowrap text-brand-primary">
               {formatEGP(price)}
             </span>
           </div>
 
           {justAdded ? (
             <span
-              className="animate-pop inline-flex h-11 items-center gap-1 rounded-full bg-brand-primary px-3 text-xs font-semibold text-text-inverse sm:h-9"
+              className="animate-pop inline-flex h-9 items-center gap-1 rounded-full bg-brand-primary px-3 text-xs font-semibold text-text-inverse"
               role="status"
             >
               <Check className="size-3.5" aria-hidden />
@@ -125,7 +125,7 @@ function ProductCardComponent({ product }: { product: Product }) {
                   setQuantity(product.id, q);
                 }
               }}
-              className="h-11 rounded-full bg-surface sm:h-9 [&>button]:w-11 sm:[&>button]:w-8 [&>span]:w-11 sm:[&>span]:w-8"
+              className="h-9 rounded-full bg-surface [&>button]:w-9 [&>span]:w-7 [&_svg]:size-3.5"
             />
           ) : (
             <button
@@ -133,7 +133,7 @@ function ProductCardComponent({ product }: { product: Product }) {
               aria-label={`Add ${product.name} to bag`}
               disabled={!canAdd}
               onClick={handleAdd}
-              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand-blush text-brand-primary transition-all hover:bg-brand-primary hover:text-text-inverse active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 sm:size-9 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-blush text-brand-primary transition-all hover:bg-brand-primary hover:text-text-inverse active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 sm:size-9 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
             >
               <Plus className="size-5" />
             </button>

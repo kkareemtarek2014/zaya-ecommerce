@@ -69,7 +69,8 @@ export function WhatsAppButton({
   return (
     <div
       className={cn(
-        'pointer-events-none fixed right-6 z-40 flex flex-col items-end gap-3 font-sans select-none',
+        // Desktop only — hidden on phones so it never covers the storefront.
+        'pointer-events-none fixed right-6 z-40 hidden flex-col items-end gap-3 font-sans select-none sm:flex',
         liftAboveStickyBuy
           ? 'bottom-[max(6rem,calc(env(safe-area-inset-bottom)+5.5rem))]'
           : 'bottom-[max(1.5rem,env(safe-area-inset-bottom))]',
