@@ -21,7 +21,6 @@ import {
 } from './ui';
 import { RecentOrders } from './RecentOrders';
 import { SalesChart } from './SalesChart';
-import { TemuScraperToggle } from './TemuScraperToggle';
 import { useAdminStats } from '../hooks/useAdminOps';
 import {
   ORDER_STATUS_FLOW,
@@ -396,13 +395,6 @@ export function DashboardView() {
             </Tabs>
           </SectionCard>
 
-          {/* 4.5 Tools parking (moved to Settings → Integrations in Phase 5) */}
-          <SectionCard
-            title="Tools"
-            description="Temporary home until Settings → Integrations lands."
-          >
-            <TemuScraperToggle />
-          </SectionCard>
         </div>
       )}
     </div>

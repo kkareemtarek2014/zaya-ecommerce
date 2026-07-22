@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm, type Resolver } from 'react-hook-form';
+import { useMemo, useState } from 'react';
+import { useForm, type Resolver, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Input, Select } from '@/shared/components/ui';
@@ -13,6 +13,13 @@ import type {
 import { ImageUploader } from './ImageUploader';
 import { MediaPicker } from './MediaPicker';
 import { adminCatalogService } from '../services/admin-catalog.service';
+import {
+  FormTabs,
+  FormTabPanel,
+  StickySaveBar,
+  type FormTabItem,
+} from './ui';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 const formSchema = z.object({
   name: z.string().trim().min(2),
@@ -72,23 +79,73 @@ interface ProductFormProps {
   isLoading?: boolean;
 }
 
+type ProductTabId = 'basics' | 'pricing' | 'media' | 'seo';
+
+const PRODUCT_TABS: Array<{ id: ProductTabId; label: string }> = [
+  { id: 'basics', label: 'Basics' },
+  { id: 'pricing', label: 'Pricing & stock' },
+  { id: 'media', label: 'Media' },
+  { id: 'seo', label: 'SEO' },
+];
+
+const TAB_FIELDS: Record<ProductTabId, readonly (keyof FormValues)[]> = {
+  basics: [
+    'name',
+    'categorySlug',
+    'status',
+    'slug',
+    'sku',
+    'tags',
+    'description',
+    'descriptionFormat',
+  ],
+  pricing: [
+    'basePrice',
+    'compareAtPrice',
+    'basePriceUsd',
+    'fulfilmentType',
+    'preorderEnabled',
+    'preorderEtaDays',
+    'inStock',
+    'featured',
+    'stockQty',
+  ],
+  media: [],
+  seo: ['seoTitle', 'seoDescription', 'ogImage', 'canonicalUrl'],
+};
+
+function arraysEqual(a: readonly string[], b: readonly string[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]!) return false;
+  }
+  return true;
+}
+
+function tabForField(field: string): ProductTabId {
+  for (const tab of PRODUCT_TABS) {
+    if (TAB_FIELDS[tab.id].includes(field as keyof FormValues)) return tab.id;
+  }
+  return 'basics';
+}
+
 export function ProductForm({
   categories,
   initial,
   onSubmit,
   isLoading,
 }: ProductFormProps) {
-  const [imageList, setImageList] = useState<string[]>(initial?.images ?? []);
+  const [activeTab, setActiveTab] = useState<ProductTabId>('basics');
+  const [imageList, setImageList] = useState<string[]>(
+    initial?.images ?? [],
+  );
+  const [savedImageList, setSavedImageList] = useState<string[]>(
+    initial?.images ?? [],
+  );
   const [mediaOpen, setMediaOpen] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(formSchema) as Resolver<FormValues>,
-    defaultValues: {
+  const defaultValues = useMemo<FormValues>(() => {
+    return {
       name: initial?.name ?? '',
       categorySlug: initial?.category ?? categories[0]?.slug ?? '',
       basePrice: initial?.basePrice ?? 100,
@@ -110,347 +167,479 @@ export function ProductForm({
       ogImage: initial?.ogImage ?? '',
       canonicalUrl: initial?.canonicalUrl ?? '',
       descriptionFormat: initial?.descriptionFormat ?? 'plain',
-    },
+    };
+  }, [categories, initial]);
+
+  const [savedFormValues, setSavedFormValues] =
+    useState<FormValues>(defaultValues);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors, isDirty: isRHFDirty },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema) as Resolver<FormValues>,
+    defaultValues,
+    shouldUnregister: false,
   });
 
   const descriptionFormat = watch('descriptionFormat');
 
+  const imagesDirty = !arraysEqual(imageList, savedImageList);
+  const isDirty = isRHFDirty || imagesDirty;
+  useUnsavedChangesGuard(isDirty);
+
+  const errorKeySet = useMemo(() => new Set<string>(Object.keys(errors)), [
+    errors,
+  ]);
+
+  const tabErrorCounts = useMemo(() => {
+    const result: Record<ProductTabId, number> = {
+      basics: 0,
+      pricing: 0,
+      media: 0,
+      seo: 0,
+    };
+    for (const tab of PRODUCT_TABS) {
+      const count = TAB_FIELDS[tab.id].reduce((acc, field) => {
+        return errorKeySet.has(field as string) ? acc + 1 : acc;
+      }, 0);
+      result[tab.id] = count;
+    }
+    return result;
+  }, [errorKeySet]);
+
+  const formTabs: FormTabItem[] = PRODUCT_TABS.map((tab) => ({
+    id: tab.id,
+    label: tab.label,
+    errorCount: tabErrorCounts[tab.id],
+  }));
+
   return (
     <form
-      className="max-w-xl space-y-4"
+      className="max-w-2xl space-y-6 pb-24"
       noValidate
-      onSubmit={handleSubmit(async (values) => {
-        const tags = values.tags
-          ? values.tags
-              .split(',')
-              .map((t) => t.trim())
-              .filter(Boolean)
-          : undefined;
-        await onSubmit({
-          name: values.name,
-          categorySlug: values.categorySlug,
-          basePrice: values.basePrice,
-          compareAtPrice: values.compareAtPrice ?? null,
-          basePriceUsd: values.basePriceUsd ?? null,
-          fulfilmentType: values.fulfilmentType,
-          preorderEnabled: values.preorderEnabled,
-          preorderEtaDays: values.preorderEnabled
-            ? values.preorderEtaDays
-            : null,
-          description: values.description,
-          images: imageList,
-          inStock: values.inStock,
-          featured: values.featured,
-          stockQty: values.stockQty,
-          tags,
-          status: values.status,
-          slug: values.slug?.trim() || null,
-          sku: values.sku?.trim() || null,
-          seoTitle: values.seoTitle?.trim() || null,
-          seoDescription: values.seoDescription?.trim() || null,
-          ogImage: values.ogImage?.trim() || null,
-          canonicalUrl: values.canonicalUrl?.trim() || null,
-          descriptionFormat: values.descriptionFormat,
-        });
-      })}
+      onSubmit={handleSubmit(
+        async (values) => {
+          const tags = values.tags
+            ? values.tags
+                .split(',')
+                .map((t) => t.trim())
+                .filter(Boolean)
+            : undefined;
+
+          await onSubmit({
+            name: values.name,
+            categorySlug: values.categorySlug,
+            basePrice: values.basePrice,
+            compareAtPrice: values.compareAtPrice ?? null,
+            basePriceUsd: values.basePriceUsd ?? null,
+            fulfilmentType: values.fulfilmentType,
+            preorderEnabled: values.preorderEnabled,
+            preorderEtaDays: values.preorderEnabled
+              ? values.preorderEtaDays
+              : null,
+            description: values.description,
+            images: imageList,
+            inStock: values.inStock,
+            featured: values.featured,
+            stockQty: values.stockQty,
+            tags,
+            status: values.status,
+            slug: values.slug?.trim() || null,
+            sku: values.sku?.trim() || null,
+            seoTitle: values.seoTitle?.trim() || null,
+            seoDescription: values.seoDescription?.trim() || null,
+            ogImage: values.ogImage?.trim() || null,
+            canonicalUrl: values.canonicalUrl?.trim() || null,
+            descriptionFormat: values.descriptionFormat,
+          });
+
+          // Clear dirty state after a successful save.
+          setSavedFormValues(values);
+          setSavedImageList(imageList);
+          reset(values, { keepDirty: false });
+        },
+        (fieldErrors: FieldErrors<FormValues>) => {
+          const firstKey = Object.keys(fieldErrors)[0];
+          if (!firstKey) return;
+          setActiveTab(tabForField(firstKey));
+        },
+      )}
     >
-      <Input label="Name" error={errors.name?.message} {...register('name')} />
-      <Select
-        label="Category"
-        error={errors.categorySlug?.message}
-        {...register('categorySlug')}
+      <FormTabs
+        tabs={formTabs}
+        active={activeTab}
+        onChange={(id) => setActiveTab(id as ProductTabId)}
       >
-        {categories.map((c) => (
-          <option key={c.slug} value={c.slug}>
-            {c.name}
-          </option>
-        ))}
-      </Select>
-      <Select
-        label="Status"
-        error={errors.status?.message}
-        {...register('status')}
-      >
-        <option value="draft">Draft</option>
-        <option value="published">Published</option>
-        <option value="hidden">Hidden (direct link only)</option>
-        <option value="archived">Archived</option>
-      </Select>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Slug (optional)"
-          error={errors.slug?.message}
-          placeholder="auto from name"
-          {...register('slug')}
-        />
-        <Input
-          label="SKU (optional)"
-          error={errors.sku?.message}
-          placeholder="auto-generated"
-          {...register('sku')}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Base price (EGP cost)"
-          type="number"
-          error={errors.basePrice?.message}
-          {...register('basePrice', { valueAsNumber: true })}
-        />
-        <Input
-          label="Compare-at price (optional)"
-          type="number"
-          error={errors.compareAtPrice?.message}
-          {...register('compareAtPrice', {
-            setValueAs: (v: unknown) => {
-              if (v === '' || v == null) return null;
-              const n = typeof v === 'number' ? v : Number(v);
-              return Number.isFinite(n) ? n : null;
-            },
-          })}
-        />
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input
-          label="Base price USD (optional)"
-          type="number"
-          step="0.01"
-          error={errors.basePriceUsd?.message}
-          {...register('basePriceUsd', {
-            setValueAs: (v: unknown) => {
-              if (v === '' || v == null) return null;
-              const n = typeof v === 'number' ? v : Number(v);
-              return Number.isFinite(n) && n > 0 ? n : null;
-            },
-          })}
-        />
-        <div className="flex flex-col justify-end gap-1 text-xs text-text-muted">
-          {initial?.landedCost != null ? (
-            <p>
-              Landed cost snapshot:{' '}
-              <span className="font-medium text-text-secondary">
-                {initial.landedCost} EGP
-              </span>
-            </p>
-          ) : (
-            <p>Set USD base to use landed-cost pricing when the flag is on.</p>
-          )}
-        </div>
-      </div>
-      <Select
-        label="Fulfilment type"
-        error={errors.fulfilmentType?.message}
-        {...register('fulfilmentType')}
-      >
-        <option value="local_stock">Local stock</option>
-        <option value="dropship">Dropship sourcing</option>
-      </Select>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex items-center gap-2 self-end pb-2 text-sm text-text-secondary">
-          <input type="checkbox" {...register('preorderEnabled')} />
-          Allow pre-order when OOS
-        </label>
-        <Input
-          label="Pre-order ETA (days)"
-          type="number"
-          error={errors.preorderEtaDays?.message}
-          {...register('preorderEtaDays', {
-            setValueAs: (v: unknown) => {
-              if (v === '' || v == null) return null;
-              const n = typeof v === 'number' ? v : Number(v);
-              return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
-            },
-          })}
-        />
-      </div>
-      {initial?.tags?.includes('temu-import') ? (
-        <p className="rounded-(--radius) border border-border bg-surface px-3 py-2 text-xs text-text-muted">
-          Temu import — localize the description for Egyptian customers before
-          publishing.
-        </p>
-      ) : null}
-      {initial?.sourceProvider ? (
-        <div className="rounded-(--radius) border border-border bg-surface px-3 py-2 text-xs text-text-muted">
-          <p>
-            Source: {initial.sourceProvider}
-            {initial.sourceProductId ? ` · ${initial.sourceProductId}` : ''}
-          </p>
-          {initial.sourceUrl ? (
-            <p className="mt-1 truncate">
-              <a
-                href={initial.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-brand-primary underline-offset-2 hover:underline"
-              >
-                {initial.sourceUrl}
-              </a>
-            </p>
-          ) : null}
-          <p className="mt-1">
-            Source stock:{' '}
-            {initial.sourceInStock == null
-              ? '—'
-              : initial.sourceInStock
-                ? 'in stock'
-                : 'OOS'}
-            {initial.lastSyncedAt
-              ? ` · synced ${new Date(initial.lastSyncedAt).toLocaleString()}`
-              : ''}
-          </p>
-        </div>
-      ) : null}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <label
-            htmlFor="product-desc"
-            className="text-sm font-medium text-text-secondary"
-          >
-            Description
-          </label>
-          <Select
-            label="Format"
-            className="w-36"
-            error={errors.descriptionFormat?.message}
-            {...register('descriptionFormat')}
-          >
-            <option value="plain">Plain text</option>
-            <option value="html">HTML</option>
-          </Select>
-        </div>
-        <textarea
-          id="product-desc"
-          rows={descriptionFormat === 'html' ? 6 : 4}
-          className="rounded-(--radius) border border-border bg-surface-raised px-4 py-3 text-sm"
-          {...register('description')}
-        />
-        {descriptionFormat === 'html' ? (
-          <p className="text-xs text-text-muted">
-            Allowed tags: p, br, strong, em, ul, ol, li, a. Scripts stripped on save.
-          </p>
-        ) : null}
-        {errors.description ? (
-          <p className="text-xs text-status-error">{errors.description.message}</p>
-        ) : null}
-      </div>
-      <Input label="Tags (comma-separated)" {...register('tags')} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        {!initial ? (
-          <Input
-            label="Initial stock qty"
-            type="number"
-            error={errors.stockQty?.message}
-            {...register('stockQty', { valueAsNumber: true })}
-          />
-        ) : (
-          <div className="rounded-(--radius) border border-border bg-surface-raised px-4 py-3 text-sm">
-            <p className="font-medium text-text-secondary">Stock</p>
-            <p className="mt-1 text-text-primary">
-              Available {initial.availableQty ?? initial.stockQty} · On hand{' '}
-              {initial.stockQty} · Reserved {initial.reservedQty ?? 0}
-            </p>
-            <p className="mt-1 text-xs text-text-muted">
-              Use the Inventory panel below to adjust stock.
-            </p>
+        <FormTabPanel id="basics" activeTab={activeTab}>
+          <div className="space-y-4">
+            <Input
+              label="Name"
+              error={errors.name?.message}
+              {...register('name')}
+            />
+
+            <Select
+              label="Category"
+              error={errors.categorySlug?.message}
+              {...register('categorySlug')}
+            >
+              {categories.map((c) => (
+                <option key={c.slug} value={c.slug}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              label="Status"
+              error={errors.status?.message}
+              {...register('status')}
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="hidden">Hidden (direct link only)</option>
+              <option value="archived">Archived</option>
+            </Select>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Slug (optional)"
+                error={errors.slug?.message}
+                placeholder="auto from name"
+                {...register('slug')}
+              />
+              <Input
+                label="SKU (optional)"
+                error={errors.sku?.message}
+                placeholder="auto-generated"
+                {...register('sku')}
+              />
+            </div>
+
+            {initial?.tags?.includes('temu-import') ? (
+              <p className="rounded-(--radius) border border-border bg-surface px-3 py-2 text-xs text-text-muted">
+                Temu import — localize the description for Egyptian customers
+                before publishing.
+              </p>
+            ) : null}
+
+            {initial?.sourceProvider ? (
+              <div className="rounded-(--radius) border border-border bg-surface px-3 py-2 text-xs text-text-muted">
+                <p>
+                  Source: {initial.sourceProvider}
+                  {initial.sourceProductId ? ` · ${initial.sourceProductId}` : ''}
+                </p>
+                {initial.sourceUrl ? (
+                  <p className="mt-1 truncate">
+                    <a
+                      href={initial.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand-primary underline-offset-2 hover:underline"
+                    >
+                      {initial.sourceUrl}
+                    </a>
+                  </p>
+                ) : null}
+                <p className="mt-1">
+                  Source stock:{' '}
+                  {initial.sourceInStock == null
+                    ? '—'
+                    : initial.sourceInStock
+                      ? 'in stock'
+                      : 'OOS'}
+                  {initial.lastSyncedAt
+                    ? ` · synced ${new Date(initial.lastSyncedAt).toLocaleString()}`
+                    : ''}
+                </p>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <label
+                  htmlFor="product-desc"
+                  className="text-sm font-medium text-text-secondary"
+                >
+                  Description
+                </label>
+                <Select
+                  label="Format"
+                  className="w-36"
+                  error={errors.descriptionFormat?.message}
+                  {...register('descriptionFormat')}
+                >
+                  <option value="plain">Plain text</option>
+                  <option value="html">HTML</option>
+                </Select>
+              </div>
+
+              <textarea
+                id="product-desc"
+                rows={descriptionFormat === 'html' ? 6 : 4}
+                className="rounded-(--radius) border border-border bg-surface-raised px-4 py-3 text-sm"
+                {...register('description')}
+              />
+
+              {descriptionFormat === 'html' ? (
+                <p className="text-xs text-text-muted">
+                  Allowed tags: p, br, strong, em, ul, ol, li, a. Scripts
+                  stripped on save.
+                </p>
+              ) : null}
+
+              {errors.description ? (
+                <p className="text-xs text-status-error">
+                  {errors.description.message}
+                </p>
+              ) : null}
+            </div>
+
+            <Input label="Tags (comma-separated)" {...register('tags')} />
           </div>
-        )}
-        <div className="flex flex-col gap-3 pt-6">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register('inStock')} />
-            In stock (admin override)
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" {...register('featured')} />
-            Featured
-          </label>
-        </div>
-      </div>
+        </FormTabPanel>
 
-      <fieldset className="space-y-3 rounded-(--radius) border border-border p-4">
-        <legend className="px-1 text-sm font-medium text-text-secondary">
-          SEO (optional)
-        </legend>
-        <Input label="SEO title" {...register('seoTitle')} />
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="product-seo-desc"
-            className="text-sm font-medium text-text-secondary"
-          >
-            SEO description
-          </label>
-          <textarea
-            id="product-seo-desc"
-            rows={2}
-            className="rounded-(--radius) border border-border bg-surface-raised px-4 py-3 text-sm"
-            {...register('seoDescription')}
-          />
-        </div>
-        <Input
-          label="OG image URL"
-          placeholder="Defaults to first product image"
-          {...register('ogImage')}
-        />
-        <Input
-          label="Canonical URL"
-          placeholder="/product/[id]"
-          {...register('canonicalUrl')}
-        />
-      </fieldset>
+        <FormTabPanel id="pricing" activeTab={activeTab}>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Base price (EGP cost)"
+                type="number"
+                error={errors.basePrice?.message}
+                {...register('basePrice', { valueAsNumber: true })}
+              />
 
-      <div>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium text-text-secondary">Images</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setMediaOpen(true)}
-          >
-            From library
-          </Button>
-        </div>
-        <ImageUploader
-          images={imageList}
-          onChange={async (next) => {
-            if (initial) {
-              const removed = imageList.filter((u) => !next.includes(u));
-              for (const url of removed) {
-                await adminCatalogService.removeProductImage(initial.id, url);
-              }
-            }
-            setImageList(next);
-          }}
-          onUploadFiles={
-            initial
-              ? async (files) => {
-                  const before = new Set(imageList);
-                  const updated = await adminCatalogService.uploadProductImages(
-                    initial.id,
-                    files,
-                  );
-                  return updated.images.filter((u) => !before.has(u));
+              <Input
+                label="Compare-at price (optional)"
+                type="number"
+                error={errors.compareAtPrice?.message}
+                {...register('compareAtPrice', {
+                  setValueAs: (v: unknown) => {
+                    if (v === '' || v == null) return null;
+                    const n = typeof v === 'number' ? v : Number(v);
+                    return Number.isFinite(n) ? n : null;
+                  },
+                })}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Base price USD (optional)"
+                type="number"
+                step="0.01"
+                error={errors.basePriceUsd?.message}
+                {...register('basePriceUsd', {
+                  setValueAs: (v: unknown) => {
+                    if (v === '' || v == null) return null;
+                    const n = typeof v === 'number' ? v : Number(v);
+                    return Number.isFinite(n) && n > 0 ? n : null;
+                  },
+                })}
+              />
+              <div className="flex flex-col justify-end gap-1 text-xs text-text-muted">
+                {initial?.landedCost != null ? (
+                  <p>
+                    Landed cost snapshot:{' '}
+                    <span className="font-medium text-text-secondary">
+                      {initial.landedCost} EGP
+                    </span>
+                  </p>
+                ) : (
+                  <p>
+                    Set USD base to use landed-cost pricing when the flag is
+                    on.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Select
+              label="Fulfilment type"
+              error={errors.fulfilmentType?.message}
+              {...register('fulfilmentType')}
+            >
+              <option value="local_stock">Local stock</option>
+              <option value="dropship">Dropship sourcing</option>
+            </Select>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="flex items-center gap-2 self-end pb-2 text-sm text-text-secondary">
+                <input type="checkbox" {...register('preorderEnabled')} />
+                Allow pre-order when OOS
+              </label>
+
+              <Input
+                label="Pre-order ETA (days)"
+                type="number"
+                error={errors.preorderEtaDays?.message}
+                {...register('preorderEtaDays', {
+                  setValueAs: (v: unknown) => {
+                    if (v === '' || v == null) return null;
+                    const n = typeof v === 'number' ? v : Number(v);
+                    return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+                  },
+                })}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {!initial ? (
+                <Input
+                  label="Initial stock qty"
+                  type="number"
+                  error={errors.stockQty?.message}
+                  {...register('stockQty', { valueAsNumber: true })}
+                />
+              ) : (
+                <div className="rounded-(--radius) border border-border bg-surface-raised px-4 py-3 text-sm">
+                  <p className="font-medium text-text-secondary">Stock</p>
+                  <p className="mt-1 text-text-primary">
+                    Available {initial.availableQty ?? initial.stockQty} · On
+                    hand {initial.stockQty} · Reserved{' '}
+                    {initial.reservedQty ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-text-muted">
+                    Use the Inventory panel below to adjust stock.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 pt-6">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" {...register('inStock')} />
+                  In stock (admin override)
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" {...register('featured')} />
+                  Featured
+                </label>
+              </div>
+            </div>
+          </div>
+        </FormTabPanel>
+
+        <FormTabPanel id="media" activeTab={activeTab}>
+          <div className="space-y-4">
+            <div>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-medium text-text-secondary">
+                  Images
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMediaOpen(true)}
+                >
+                  From library
+                </Button>
+              </div>
+
+              <ImageUploader
+                images={imageList}
+                onChange={async (next) => {
+                  if (initial) {
+                    const removed = imageList.filter(
+                      (u) => !next.includes(u),
+                    );
+                    for (const url of removed) {
+                      await adminCatalogService.removeProductImage(
+                        initial.id,
+                        url,
+                      );
+                    }
+                  }
+                  setImageList(next);
+                }}
+                onUploadFiles={
+                  initial
+                    ? async (files) => {
+                        const before = new Set(imageList);
+                        const updated =
+                          await adminCatalogService.uploadProductImages(
+                            initial.id,
+                            files,
+                          );
+                        return updated.images.filter((u) => !before.has(u));
+                      }
+                    : undefined
                 }
-              : undefined
-          }
-        />
-        {!initial ? (
-          <p className="mt-1 text-xs text-text-muted">
-            Save the product first, then upload images on the edit page — or pick from the library.
-          </p>
-        ) : null}
-      </div>
+              />
 
-      <MediaPicker
-        open={mediaOpen}
-        onClose={() => setMediaOpen(false)}
-        onSelect={(url) => {
-          if (!imageList.includes(url)) setImageList([...imageList, url]);
+              {!initial ? (
+                <p className="mt-1 text-xs text-text-muted">
+                  Save the product first, then upload images on the edit page
+                  - or pick from the library.
+                </p>
+              ) : null}
+            </div>
+
+            <MediaPicker
+              open={mediaOpen}
+              onClose={() => setMediaOpen(false)}
+              onSelect={(url) => {
+                if (!imageList.includes(url)) {
+                  setImageList([...imageList, url]);
+                }
+              }}
+            />
+          </div>
+        </FormTabPanel>
+
+        <FormTabPanel id="seo" activeTab={activeTab}>
+          <div className="space-y-4">
+            <fieldset className="space-y-3 rounded-(--radius) border border-border p-4">
+              <legend className="px-1 text-sm font-medium text-text-secondary">
+                SEO (optional)
+              </legend>
+              <Input label="SEO title" {...register('seoTitle')} />
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="product-seo-desc"
+                  className="text-sm font-medium text-text-secondary"
+                >
+                  SEO description
+                </label>
+                <textarea
+                  id="product-seo-desc"
+                  rows={2}
+                  className="rounded-(--radius) border border-border bg-surface-raised px-4 py-3 text-sm"
+                  {...register('seoDescription')}
+                />
+              </div>
+
+              <Input
+                label="OG image URL"
+                placeholder="Defaults to first product image"
+                {...register('ogImage')}
+              />
+              <Input
+                label="Canonical URL"
+                placeholder="/product/[id]"
+                {...register('canonicalUrl')}
+              />
+            </fieldset>
+          </div>
+        </FormTabPanel>
+      </FormTabs>
+
+      <StickySaveBar
+        isDirty={isDirty}
+        isSubmitting={Boolean(isLoading)}
+        submitLabel={initial ? 'Save changes' : 'Create product'}
+        onDiscard={() => {
+          reset(savedFormValues, { keepDirty: false });
+          setImageList(savedImageList);
+          setMediaOpen(false);
         }}
       />
-
-      <Button type="submit" isLoading={isLoading}>
-        {initial ? 'Save changes' : 'Create product'}
-      </Button>
     </form>
   );
 }
+

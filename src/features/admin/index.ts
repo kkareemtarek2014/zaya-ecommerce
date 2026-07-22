@@ -20,7 +20,6 @@ export { OrderQuickActions } from './components/OrderQuickActions';
 export { OrderDrawer } from './components/OrderDrawer';
 
 export { UserForm } from './components/UserForm';
-export { SettingsForm } from './components/SettingsForm';
 export { CronJobsPanel } from './components/CronJobsPanel';
 export { IntegrationsStatusPanel } from './components/IntegrationsStatusPanel';
 export { TemuScraperToggle } from './components/TemuScraperToggle';
@@ -34,6 +33,11 @@ export { LatestProducts } from './components/LatestProducts';
 export { DashboardView } from './components/DashboardView';
 export { NotificationBell } from './components/NotificationBell';
 export { ActivityFeed } from './components/ActivityFeed';
+export { PricingSettingsForm } from './components/settings/pricing-settings-form';
+export { SeoSettingsForm } from './components/settings/seo-settings-form';
+export { IntegrationsPanel } from './components/settings/integrations-panel';
+export { StoreSettingsForm } from './components/settings/store-settings-form';
+export { ShippingSettingsForm } from './components/settings/shipping-settings-form';
 export {
   useAdminProducts,
   useAdminProduct,

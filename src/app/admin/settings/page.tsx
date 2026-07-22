@@ -1,116 +1,96 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
 import {
-  AdminPageHeader,
-  IntegrationsStatusPanel,
-  SettingsForm,
-  useAdminSettings,
-  useUpdateAdminSettings,
-} from '@/features/admin';
-import { useToast } from '@/shared/components/ui';
-import { AppError } from '@/shared/contracts/errors';
+  Store,
+  Truck,
+  Percent,
+  BadgeCheck,
+  Search,
+  LayoutDashboard,
+} from 'lucide-react';
+import { AdminPageHeader } from '@/features/admin';
 
-function fieldErrorsFromDetails(
-  details: unknown,
-): Record<string, string[] | undefined> | undefined {
-  if (!details || typeof details !== 'object') return undefined;
-  const fieldErrors = (details as { fieldErrors?: unknown }).fieldErrors;
-  if (!fieldErrors || typeof fieldErrors !== 'object') return undefined;
-  return fieldErrors as Record<string, string[] | undefined>;
-}
+const tiles = [
+  {
+    href: '/admin/settings/store',
+    title: 'Store',
+    description: 'Branding, contact & social links',
+    icon: Store,
+  },
+  {
+    href: '/admin/settings/shipping',
+    title: 'Shipping',
+    description: 'ETA hints and free-shipping threshold',
+    icon: Truck,
+  },
+  {
+    href: '/admin/settings/pricing',
+    title: 'Pricing',
+    description: 'Profit margin, landed-cost engine & rounding',
+    icon: Percent,
+  },
+  {
+    href: '/admin/settings/integrations',
+    title: 'Integrations',
+    description:
+      'Paymob/Bosta health, Temu kill switch, cron timing',
+    icon: BadgeCheck,
+  },
+  {
+    href: '/admin/settings/seo',
+    title: 'SEO',
+    description: 'Default titles, descriptions, footer text',
+    icon: Search,
+  },
+] as const;
 
 export default function AdminSettingsPage() {
-  const { toast } = useToast();
-  const { data, isLoading, isError } = useAdminSettings();
-  const updateMutation = useUpdateAdminSettings();
-  const [serverFieldErrors, setServerFieldErrors] = useState<
-    Record<string, string[] | undefined> | undefined
-  >();
-
   return (
     <div>
       <AdminPageHeader
         title="Settings"
-        subtitle="Profit margin, branding, contact, SEO, maintenance, and cron automation."
-        breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Settings' }]}
+        subtitle="Configure your storefront defaults and integrations."
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Settings' },
+        ]}
       />
 
-
-      <div className="mt-6">
-        {isLoading ? (
-          <p className="text-sm text-text-muted">Loading…</p>
-        ) : isError || !data ? (
-          <p className="text-sm text-status-error">Failed to load settings.</p>
-        ) : (
-          <>
-            <SettingsForm
-              initial={data}
-              isLoading={updateMutation.isPending}
-              serverFieldErrors={serverFieldErrors}
-              onSubmit={async (values) => {
-                try {
-                  setServerFieldErrors(undefined);
-                  const n = (v: string | undefined) => {
-                    const t = v?.trim() ?? '';
-                    return t ? t : null;
-                  };
-                  await updateMutation.mutateAsync({
-                    profitMargin: values.profitMargin,
-                    freeShippingThreshold: values.freeShippingThreshold,
-                    lowStockThreshold: values.lowStockThreshold,
-                    usdEgpRate: values.usdEgpRate,
-                    bulkShippingUsd: values.bulkShippingUsd,
-                    customsDutyRate: values.customsDutyRate,
-                    vatRate: values.vatRate,
-                    handlingFeeEgp: values.handlingFeeEgp,
-                    targetMargin: values.targetMargin,
-                    priceRoundingEgp: values.priceRoundingEgp,
-                    siteName: values.siteName,
-                    siteTagline: values.siteTagline,
-                    siteUrl: values.siteUrl,
-                    logoUrl: n(values.logoUrl),
-                    faviconUrl: n(values.faviconUrl),
-                    contactEmail: n(values.contactEmail),
-                    contactPhone: n(values.contactPhone),
-                    whatsappNumber: n(values.whatsappNumber),
-                    socialInstagram: n(values.socialInstagram),
-                    socialFacebook: n(values.socialFacebook),
-                    socialTiktok: n(values.socialTiktok),
-                    shippingEtaLocal: values.shippingEtaLocal,
-                    shippingEtaDropship: values.shippingEtaDropship,
-                    instagramHandle: n(values.instagramHandle),
-                    instagramPostUrls: (values.instagramPostUrls ?? '')
-                      .split('\n')
-                      .map((u) => u.trim())
-                      .filter(Boolean),
-                    seoDefaultTitle: n(values.seoDefaultTitle),
-                    seoDefaultDescription: n(values.seoDefaultDescription),
-                    footerText: n(values.footerText),
-                    announcementItems: values.announcementItems,
-                    maintenanceMode: values.maintenanceMode,
-                    unpaidOrderTimeoutMinutes: values.unpaidOrderTimeoutMinutes,
-                    pendingReminderHours: values.pendingReminderHours,
-                  });
-                  toast('Settings saved', 'success');
-                } catch (err) {
-                  if (err instanceof AppError) {
-                    const fields = fieldErrorsFromDetails(err.details);
-                    setServerFieldErrors(fields);
-                    const firstFieldMsg = fields
-                      ? Object.values(fields).flat().find(Boolean)
-                      : undefined;
-                    toast(firstFieldMsg ?? err.message, 'error');
-                    return;
-                  }
-                  toast('Save failed', 'error');
-                }
-              }}
-            />
-            <IntegrationsStatusPanel />
-          </>
-        )}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {tiles.map((t) => (
+          <Link key={t.href} href={t.href} className="block">
+            <div className="h-full rounded-(--radius-lg) border border-border bg-surface-raised p-5 transition-colors hover:border-brand-primary/40">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <t.icon className="mt-0.5 size-4 text-brand-primary" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-text-primary">
+                      {t.title}
+                    </h3>
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {t.description}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold text-brand-primary hover:underline">
+                  Open
+                </span>
+              </div>
+            </div>
+          </Link>
+        ))}
+        <div className="sm:col-span-2 lg:col-span-3">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-brand-primary"
+          >
+            <LayoutDashboard className="size-4" />
+            Back to dashboard
+          </Link>
+        </div>
       </div>
     </div>
   );
 }
+
