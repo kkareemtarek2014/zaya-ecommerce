@@ -17,7 +17,7 @@ export function NewsletterForm() {
           type="email"
           placeholder="Enter your email"
           aria-label="Email address"
-          className="w-full rounded-full border border-border bg-brand-blush/20 py-2.5 pl-10 pr-12 text-sm outline-none transition-all placeholder:text-text-muted focus:border-brand-primary focus:bg-white focus:ring-1 focus:ring-brand-primary sm:py-3 sm:pl-12 sm:pr-14"
+          className="w-full rounded-full border border-border bg-brand-blush/20 py-2.5 pl-10 pr-12 text-base outline-none transition-all placeholder:text-text-muted focus:border-brand-primary focus:bg-white focus:ring-1 focus:ring-brand-primary sm:py-3 sm:pl-12 sm:pr-14 sm:text-sm"
         />
         <button
           type="submit"

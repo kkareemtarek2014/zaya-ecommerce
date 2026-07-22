@@ -139,6 +139,7 @@ export function ClassicHome({
                 width={880}
                 height={660}
                 priority
+                sizes="(min-width: 1024px) 50vw, 100vw"
                 className="size-full object-cover"
               />
             </div>
@@ -189,7 +190,7 @@ export function ClassicHome({
                   title={cat.name}
                   width={300}
                   height={300}
-                  sizes="(min-width: 1024px) 33vw, 33vw"
+                  sizes="33vw"
                   className="size-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
               </div>

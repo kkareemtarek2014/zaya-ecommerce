@@ -27,6 +27,7 @@ export function BundleSpotlight({
               alt={bundle.name}
               width={480}
               height={480}
+              sizes="(min-width: 1024px) 40vw, 100vw"
               className="size-full object-cover"
             />
           </div>

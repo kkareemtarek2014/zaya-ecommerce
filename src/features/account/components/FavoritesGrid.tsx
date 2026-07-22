@@ -63,7 +63,7 @@ export function FavoritesGrid() {
                   alt={product.name}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 640px) 100vw, 33vw"
+                  sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                 />
               </div>
               <div className="p-3">

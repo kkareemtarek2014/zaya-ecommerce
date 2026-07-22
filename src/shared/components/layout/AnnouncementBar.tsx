@@ -59,7 +59,7 @@ export function AnnouncementBar({ items }: AnnouncementBarProps) {
   if (!current) return null;
 
   const content = (
-    <span className="block truncate px-4 py-2 text-center text-xs font-medium tracking-wide">
+    <span className="block min-h-11 truncate px-4 py-2 text-center text-xs font-medium leading-7 tracking-wide">
       {current.text}
     </span>
   );

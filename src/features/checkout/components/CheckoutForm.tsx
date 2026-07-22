@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Banknote, CreditCard, Smartphone } from 'lucide-react';
 import { formatEGP } from '@/shared/utils/price';
@@ -28,6 +28,30 @@ import {
   buildShippingPreviewConfig,
   getShippingCost,
 } from '../utils/shipping';
+
+const FIELD_ORDER: (keyof CheckoutFormValues)[] = [
+  'paymentMethod',
+  'fullName',
+  'phone',
+  'governorate',
+  'city',
+  'street',
+  'notes',
+];
+
+function scrollToFirstError(errors: FieldErrors<CheckoutFormValues>) {
+  for (const key of FIELD_ORDER) {
+    if (!errors[key]) continue;
+    const el = document.querySelector<HTMLElement>(
+      `[name="${key}"], #${key}`,
+    );
+    if (el) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el.focus?.();
+      return;
+    }
+  }
+}
 
 export function CheckoutForm() {
   const mounted = useHydrated();
@@ -124,74 +148,19 @@ export function CheckoutForm() {
     }
   };
 
+  const submitLabel =
+    paymentMethod === 'card' || paymentMethod === 'wallet'
+      ? `Place order & pay · ${formatEGP(total)}`
+      : `Place order · ${formatEGP(total)}`;
+
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="grid gap-10 lg:grid-cols-[1fr_380px]"
+      onSubmit={handleSubmit(onSubmit, scrollToFirstError)}
+      className="grid gap-10 pb-28 lg:grid-cols-[1fr_380px] lg:pb-0"
       noValidate
     >
       <div className="space-y-8">
-        <section className="space-y-4">
-          <h2 className="font-display text-xl font-semibold">
-            Delivery Details
-          </h2>
-          {formError && (
-            <p className="text-sm text-status-error">{formError}</p>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="Full name"
-              placeholder="Mariam Ahmed"
-              autoComplete="name"
-              error={errors.fullName?.message}
-              {...register('fullName')}
-            />
-            <Input
-              label="Mobile number"
-              placeholder="01012345678"
-              inputMode="numeric"
-              autoComplete="tel"
-              hint="Egyptian mobile starting 01…"
-              error={errors.phone?.message}
-              {...register('phone')}
-            />
-            <Select
-              label="Governorate"
-              error={errors.governorate?.message}
-              {...register('governorate')}
-            >
-              <option value="" disabled>
-                Select governorate…
-              </option>
-              {GOVERNORATES.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </Select>
-            <Input
-              label="City / Area"
-              placeholder="Maadi"
-              autoComplete="address-level2"
-              error={errors.city?.message}
-              {...register('city')}
-            />
-          </div>
-          <Input
-            label="Street address"
-            placeholder="Street, building, floor, apartment"
-            autoComplete="street-address"
-            error={errors.street?.message}
-            {...register('street')}
-          />
-          <Input
-            label="Order notes (optional)"
-            placeholder="e.g. Call before delivery"
-            error={errors.notes?.message}
-            {...register('notes')}
-          />
-        </section>
-
+        {/* Payment first so COD explainer is visible on 375px without scrolling */}
         <section className="space-y-4">
           <h2 className="font-display text-xl font-semibold">Payment</h2>
           <div className="space-y-3">
@@ -212,7 +181,7 @@ export function CheckoutForm() {
               <div>
                 <p className="text-sm font-medium">Cash on delivery</p>
                 <p className="text-xs text-text-muted">
-                  Pay when your order arrives.
+                  Pay when your order arrives — no card needed.
                 </p>
               </div>
             </label>
@@ -270,9 +239,74 @@ export function CheckoutForm() {
             </p>
           ) : null}
         </section>
+
+        <section className="space-y-4">
+          <h2 className="font-display text-xl font-semibold">
+            Delivery Details
+          </h2>
+          {formError ? (
+            <p className="text-sm text-status-error" role="alert">
+              {formError}
+            </p>
+          ) : null}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Full name"
+              placeholder="Mariam Ahmed"
+              autoComplete="name"
+              error={errors.fullName?.message}
+              {...register('fullName')}
+            />
+            <Input
+              label="Mobile number"
+              type="tel"
+              placeholder="01012345678"
+              inputMode="numeric"
+              autoComplete="tel"
+              hint="Egyptian mobile starting 01…"
+              error={errors.phone?.message}
+              {...register('phone')}
+            />
+            <Select
+              label="Governorate"
+              error={errors.governorate?.message}
+              {...register('governorate')}
+            >
+              <option value="" disabled>
+                Select governorate…
+              </option>
+              {GOVERNORATES.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </Select>
+            <Input
+              label="City / Area"
+              placeholder="Maadi"
+              autoComplete="address-level2"
+              error={errors.city?.message}
+              {...register('city')}
+            />
+          </div>
+          <Input
+            label="Street address"
+            placeholder="Street, building, floor, apartment"
+            autoComplete="street-address"
+            error={errors.street?.message}
+            {...register('street')}
+          />
+          <Input
+            label="Order notes (optional)"
+            placeholder="e.g. Call before delivery"
+            error={errors.notes?.message}
+            {...register('notes')}
+          />
+        </section>
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-surface-raised p-6">
+      {/* Desktop summary (aside) */}
+      <aside className="hidden h-fit rounded-lg border border-border bg-surface-raised p-6 lg:block">
         <h2 className="font-display text-xl font-semibold">Order Summary</h2>
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between">
@@ -309,11 +343,27 @@ export function CheckoutForm() {
           className="mt-5"
           isLoading={placeOrder.isPending}
         >
-          {paymentMethod === 'card' || paymentMethod === 'wallet'
-            ? 'Place order & pay'
-            : 'Place order'}
+          {submitLabel}
         </Button>
       </aside>
+
+      {/* Mobile sticky submit + compact total */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface-raised/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:hidden">
+        <div className="mb-2 flex items-center justify-between text-sm">
+          <span className="text-text-secondary">Total</span>
+          <span className="font-semibold text-brand-primary">
+            {formatEGP(total)}
+          </span>
+        </div>
+        <Button
+          type="submit"
+          fullWidth
+          size="lg"
+          isLoading={placeOrder.isPending}
+        >
+          {submitLabel}
+        </Button>
+      </div>
     </form>
   );
 }

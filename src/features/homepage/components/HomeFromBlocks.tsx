@@ -87,6 +87,7 @@ function HeroBlock({ config }: { config: Record<string, unknown> }) {
             width={880}
             height={660}
             priority
+            sizes="(min-width: 1024px) 50vw, 100vw"
             className="size-full object-cover"
           />
         </div>
@@ -272,6 +273,7 @@ function PromoBlock({ config }: { config: Record<string, unknown> }) {
               alt={title}
               width={720}
               height={450}
+              sizes="(min-width: 1024px) 50vw, 100vw"
               className="size-full object-cover"
             />
           </div>

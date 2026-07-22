@@ -21,7 +21,7 @@ export function OrderNote() {
         placeholder="Delivery instructions, special requests..."
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        className="w-full resize-none rounded-(--radius) border border-border px-3 py-2 text-sm outline-none transition-colors focus:border-brand-primary"
+        className="w-full resize-none rounded-(--radius) border border-border px-3 py-2 text-base outline-none transition-colors focus:border-brand-primary sm:text-sm"
       />
     </div>
   );

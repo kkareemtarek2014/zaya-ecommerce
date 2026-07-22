@@ -15,6 +15,7 @@ export function OrderItemsList({ items }: { items: OrderDTO['items'] }) {
               alt={item.name}
               width={112}
               height={112}
+              sizes="56px"
               className="size-full object-cover"
             />
           </div>

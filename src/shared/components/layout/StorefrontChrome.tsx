@@ -31,7 +31,12 @@ export function StorefrontChrome({
       <Header branding={branding} />
       <main className="flex-1">{children}</main>
       <Footer branding={branding} />
-      {whatsappDigits ? <WhatsAppButton phoneNumber={whatsappDigits} /> : null}
+      {whatsappDigits ? (
+        <WhatsAppButton
+          phoneNumber={whatsappDigits}
+          liftAboveStickyBuy={pathname?.startsWith('/product/') ?? false}
+        />
+      ) : null}
       <WelcomeOfferPopup />
     </>
   );

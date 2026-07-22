@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Nunito, Baloo_2 } from 'next/font/google';
 import { SITE } from '@/config/site.config';
@@ -21,6 +21,14 @@ const baloo2 = Baloo_2({
   display: 'swap',
 });
 
+/** Enables env(safe-area-inset-*) on iOS; tints Android Chrome UI teal. */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#129488', // --color-brand-primary
+};
+
 export async function generateMetadata(): Promise<Metadata> {
   const branding = await getSiteBranding();
   const titleDefault =
@@ -39,9 +47,10 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: '/',
     },
-    icons: branding.faviconUrl
-      ? { icon: branding.faviconUrl }
-      : undefined,
+    icons: {
+      icon: branding.faviconUrl ?? '/icon-192.png',
+      apple: '/apple-touch-icon.png',
+    },
     openGraph: {
       title: titleDefault,
       description,

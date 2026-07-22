@@ -3,7 +3,7 @@
 > Actionable plan for Core Web Vitals, crawlability, and perceived performance.
 > Complements `docs/backend/` and the storefront rules in `CLAUDE.md`.
 >
-> **Last updated:** 2026-07-15
+> **Last updated:** 2026-07-22
 
 ---
 
@@ -392,3 +392,50 @@ Each PR: `pnpm typecheck` · `pnpm lint` · `pnpm build` · `pnpm assert:no-secr
 | 2026-07-15 | Plan authored; skeleton loaders are P0 alongside RSC crawlability |
 | 2026-07-15 | Prefer section skeletons over fullscreen `Loader` for storefront navigations |
 | 2026-07-15 | **Workstream A implemented** — shared kit under `src/shared/components/ui/skeleton/`, route `loading.tsx` for home/shop/product/bride/cart/checkout/account/order/auth, client refetch placeholders wired |
+| 2026-07-22 | **Mobile Phase 4 (M-40…M-42)** — image `sizes` audit + LCP `priority` on heroes/gallery[0] only; shop `ProductCard` memo + 150ms debounced search; CWV budgets tracked below (do not fork a second perf backlog) |
+
+---
+
+## Mobile Phase 4 — CWV budget check (M-42)
+
+After Phases 0–3 mobile UX work, measure **Chrome Lighthouse mobile (throttled)** on:
+
+| Route | Budgets |
+| --- | --- |
+| `/` | LCP &lt; 2.5s · CLS &lt; 0.05 · INP &lt; 200ms |
+| `/shop` | same |
+| `/product/[id]` | same |
+| `/checkout` | same |
+
+**Shipped in mobile Phase 4 (code):** accurate `sizes` on storefront grids/heroes/thumbs; `priority` only on homepage hero + first PDP gallery slide; `ProductCard` memoized; shop search filter debounced 150ms.
+
+### Baseline — 2026-07-22 (lab)
+
+**Environment:** Lighthouse 12.8.1 · form factor mobile · simulated throttling · against **`next dev`** on `localhost:3000` (not a production build). Treat absolute scores as directional; TTFB and “unminified JS / Next DevTools” are inflated by dev mode.
+
+| Route | Perf | FCP | LCP | CLS | TBT | vs budget |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `/` | 36 | 1.1s | **9.5s** | **0** | 2.8s | LCP fail · CLS pass |
+| `/shop` | 57 | 1.9s | **2.3s** | **0** | 10.1s | LCP pass* · CLS pass |
+| `/product/sq-001` | 59 | 1.3s | **1.8s** | **0** | 19.7s | LCP pass* · CLS pass |
+| `/checkout` (empty bag) | 31 | 1.1s | **9.7s** | **0.25** | 3.0s | LCP fail · CLS fail |
+
+\*Shop/PDP **LCP element was the “Sqoosh” logo**, not product imagery — catalog body is still mostly client-fetched, so LCP “passing” does not mean the money content is fast.
+
+**Home LCP breakdown:** ~77% TTFB (~7.3s in this run) → then hero copy (`p.mt-5` supporting text), not the hero image.
+
+**Top recurring opportunities (even after discounting pure-dev noise):**
+
+1. **Storefront pulls admin JS** — unused chunk `src_features_admin_components_*.js` (~60–74 KiB) on home/shop/PDP/checkout. Split admin out of the client graph.
+2. **Heavy shared client deps on every page** — Zod + react-hook-form chunks appear on routes that don’t need forms yet; dynamic-import checkout/auth forms.
+3. **Shop/PDP first paint is chrome, not catalog** — confirms Workstream B (RSC product/shop HTML) as the highest real LCP win once TTFB is production-normal.
+4. **Checkout CLS 0.25** — empty-bag path: skeleton/hydration → “Your bag is empty” swap. Reserve layout in checkout `loading.tsx` / empty state to match final box height; re-test with a filled cart in production.
+
+**Still open (track here, not in mobile-tasks):**
+
+- [x] Run Lighthouse mobile baseline on the four routes (lab numbers above) — **re-run on `pnpm build && pnpm start` (or preview) before treating scores as ship gates**
+- [ ] Production mobile Lighthouse on `/`, `/shop`, `/product/[id]`, filled `/checkout`
+- [ ] Stop shipping `features/admin` client chunks on the storefront
+- [ ] Real squishy photos ≤ ~120KB WebP per grid image (placeholders are light today — re-verify at photo cutover) — Workstream F
+- [ ] RSC crawlable catalog HTML (P0 gap above) — biggest remaining LCP/SEO lever
+- [ ] `next/dynamic` for search modal / cart drawer / below-fold PDP — Workstream F

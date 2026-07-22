@@ -10,35 +10,23 @@ import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { useBackButtonClose } from '@/shared/hooks/useBackButtonClose';
 import { useHydrated } from '@/shared/hooks/useHydrated';
 
-export interface DrawerProps {
+export interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
-  /** Pinned below the scroll area (e.g. cart checkout footer). */
-  footer?: ReactNode;
-  /** Slide-in edge. Defaults to `right` (cart). Use `left` for mobile nav. */
-  side?: 'left' | 'right';
-  /**
-   * Full-width panel on mobile (cart sheet). Defaults to false —
-   * left nav stays `max-w-sm`, right cart uses `max-w-md` from `sm+`.
-   */
-  fullWidthMobile?: boolean;
 }
 
 /**
- * Slide-in panel with overlay. Portal to body, focus trap, scroll lock, Esc,
- * and Android/iOS back closes the overlay.
+ * Mobile bottom sheet: portal, focus trap, scroll lock, Esc, back-button close,
+ * safe-area padding, overscroll-contain.
  */
-export function Drawer({
+export function BottomSheet({
   isOpen,
   onClose,
   title,
   children,
-  footer,
-  side = 'right',
-  fullWidthMobile = false,
-}: DrawerProps) {
+}: BottomSheetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const mounted = useHydrated();
@@ -90,16 +78,9 @@ export function Drawer({
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          'absolute top-0 flex h-dvh w-full flex-col bg-surface-raised shadow-2xl transition-transform duration-300 ease-out',
-          side === 'left' ? 'left-0 max-w-sm' : 'right-0',
-          side === 'right' &&
-            (fullWidthMobile ? 'max-w-none sm:max-w-md' : 'max-w-md'),
-          !footer && 'pb-[env(safe-area-inset-bottom)]',
-          isOpen
-            ? 'translate-x-0'
-            : side === 'left'
-              ? '-translate-x-full'
-              : 'translate-x-full',
+          'absolute inset-x-0 bottom-0 flex max-h-[85dvh] w-full flex-col rounded-t-lg bg-surface-raised shadow-2xl transition-transform duration-300 ease-out',
+          'pb-[max(1rem,env(safe-area-inset-bottom))]',
+          isOpen ? 'translate-y-0' : 'translate-y-full',
         )}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
@@ -113,19 +94,14 @@ export function Drawer({
             type="button"
             aria-label="Close"
             onClick={onClose}
-            className="flex size-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-brand-blush hover:text-brand-primary sm:size-9"
+            className="flex size-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-brand-blush hover:text-brand-primary"
           >
             <X className="size-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+        <div className="overflow-y-auto overscroll-contain px-2 py-2">
           {children}
         </div>
-        {footer ? (
-          <div className="shrink-0 border-t border-border bg-surface-raised px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {footer}
-          </div>
-        ) : null}
       </div>
     </div>,
     document.body,

@@ -30,11 +30,11 @@ export function QuantityStepper({
         aria-label="Decrease quantity"
         disabled={value <= min}
         onClick={() => onChange(value - 1)}
-        className="flex h-full w-10 items-center justify-center text-text-secondary transition-colors hover:text-brand-primary disabled:opacity-40"
+        className="flex h-full w-11 items-center justify-center text-text-secondary transition-colors hover:text-brand-primary disabled:opacity-40"
       >
         <Minus className="size-4" />
       </button>
-      <span className="w-10 text-center text-sm font-medium tabular-nums">
+      <span className="w-11 text-center text-sm font-medium tabular-nums">
         {value}
       </span>
       <button
@@ -42,7 +42,7 @@ export function QuantityStepper({
         aria-label="Increase quantity"
         disabled={value >= max}
         onClick={() => onChange(value + 1)}
-        className="flex h-full w-10 items-center justify-center text-text-secondary transition-colors hover:text-brand-primary disabled:opacity-40"
+        className="flex h-full w-11 items-center justify-center text-text-secondary transition-colors hover:text-brand-primary disabled:opacity-40"
       >
         <Plus className="size-4" />
       </button>

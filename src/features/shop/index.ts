@@ -2,6 +2,7 @@ export { ProductCard } from './components/ProductCard';
 export { ProductGrid } from './components/ProductGrid';
 export { ProductSort } from './components/ProductSort';
 export { CategoryPills } from './components/CategoryPills';
+export { TagChips, collectThemeTags, parseTagsParam } from './components/TagChips';
 export { FeaturedProducts } from './components/FeaturedProducts';
 export { ShopView } from './components/ShopView';
 export {

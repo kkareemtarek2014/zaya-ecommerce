@@ -22,6 +22,7 @@ export function CartItemRow({ item }: { item: CartItem }) {
           alt={item.name}
           width={192}
           height={192}
+          sizes="96px"
           className="size-full object-cover"
         />
       </Link>

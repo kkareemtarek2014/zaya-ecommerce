@@ -66,6 +66,7 @@ export function ProductBundleHints({ productId }: { productId: string }) {
                       alt={p.name}
                       width={64}
                       height={64}
+                      sizes="64px"
                       className="size-16 object-cover"
                     />
                   </Link>

@@ -73,7 +73,7 @@ export function MobileNavDrawer({
                   href={link.href}
                   onClick={close}
                   className={cn(
-                    'rounded-lg px-3 py-3 text-sm font-medium transition-colors',
+                    'rounded-lg px-3 py-3 text-sm font-medium transition-colors active:scale-[0.97]',
                     isActive
                       ? 'bg-brand-blush/70 text-brand-primary'
                       : 'text-text-primary hover:bg-brand-blush/50',
@@ -89,7 +89,7 @@ export function MobileNavDrawer({
             <Link
               href="/account"
               onClick={close}
-              className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-brand-blush/50"
+              className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-brand-blush/50 active:scale-[0.97]"
             >
               <span className="flex size-9 items-center justify-center rounded-full bg-brand-blush text-brand-primary">
                 <User className="size-4" />

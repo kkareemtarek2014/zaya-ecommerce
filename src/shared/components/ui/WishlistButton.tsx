@@ -58,7 +58,7 @@ export function WishlistButton({
       className={cn(
         'group/heart flex items-center justify-center transition-colors',
         variant === 'icon' &&
-          'size-9 rounded-full bg-surface-raised/85 text-text-secondary shadow-sm backdrop-blur-sm hover:text-brand-primary',
+          'size-11 rounded-full bg-surface-raised/85 text-text-secondary shadow-sm backdrop-blur-sm hover:text-brand-primary active:scale-[0.97] sm:size-9',
         variant === 'inline' && 'text-text-secondary hover:text-brand-primary',
         className,
       )}

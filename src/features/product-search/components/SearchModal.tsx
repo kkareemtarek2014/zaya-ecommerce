@@ -10,6 +10,7 @@ import { SearchResultsSkeleton } from '@/shared/components/ui';
 import { useEscapeKey } from '@/shared/hooks/useEscapeKey';
 import { useScrollLock } from '@/shared/hooks/useScrollLock';
 import { useFocusTrap } from '@/shared/hooks/useFocusTrap';
+import { useBackButtonClose } from '@/shared/hooks/useBackButtonClose';
 import { useRecentSearches, useSearch } from '../hooks/useSearch';
 
 interface SearchModalProps {
@@ -26,6 +27,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
   useEscapeKey(true, onClose);
   useScrollLock(true);
   useFocusTrap(panelRef, true);
+  useBackButtonClose(true, onClose);
 
   if (typeof document === 'undefined') return null;
 
@@ -60,13 +62,13 @@ export function SearchModal({ onClose }: SearchModalProps) {
               onChange={(e) => setValue(e.target.value)}
               placeholder="Search squishies, dumplings, glow…"
               aria-label="Search products"
-              className="h-14 w-full bg-transparent text-sm outline-none placeholder:text-text-muted [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+              className="h-14 w-full bg-transparent text-base outline-none placeholder:text-text-muted sm:text-sm [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
             />
             <button
               type="button"
               aria-label="Close search"
               onClick={onClose}
-              className="flex size-8 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-brand-blush hover:text-brand-primary"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-brand-blush hover:text-brand-primary sm:size-9"
             >
               <X className="size-4" />
             </button>
@@ -126,6 +128,7 @@ export function SearchModal({ onClose }: SearchModalProps) {
                           alt=""
                           width={96}
                           height={96}
+                          sizes="48px"
                           className="size-full object-cover"
                         />
                       </div>

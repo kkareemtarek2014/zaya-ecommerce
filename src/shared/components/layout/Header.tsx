@@ -50,84 +50,86 @@ export function Header({ branding }: HeaderProps) {
   }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur">
+    <>
+      {/* Outside sticky header so it scrolls away (M-33) — keeps mobile sticky nav at 64px */}
       <AnnouncementBar items={branding.announcements} />
 
-      <div className="mx-auto flex h-16 max-w-container items-center justify-between gap-4 px-4 lg:px-8">
-        <Link
-          href="/"
-          className="font-display text-3xl font-bold tracking-wide text-brand-primary italic"
-        >
-          {branding.logoUrl ? (
-            // next/image with unoptimized:true (project lock)
-            <Image
-              src={branding.logoUrl}
-              alt={branding.siteName}
-              width={140}
-              height={40}
-              className="h-10 w-auto object-contain"
-              unoptimized
-            />
-          ) : (
-            branding.siteName
-          )}
-        </Link>
-
-        <nav
-          aria-label="Main navigation"
-          className="hidden items-center gap-8 md:flex"
-        >
-          {navLinks.map((link) => {
-            const isActive =
-              pathname === link.href ||
-              (link.href !== '/' && pathname.startsWith(link.href));
-
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  'group relative py-1 text-sm font-medium transition-colors duration-200',
-                  isActive
-                    ? 'text-brand-primary'
-                    : 'text-text-secondary hover:text-brand-primary',
-                )}
-              >
-                <span>{link.label}</span>
-                <span
-                  className={cn(
-                    'absolute bottom-0 left-0 h-0.5 w-full origin-left bg-brand-primary transition-transform duration-300 ease-out',
-                    isActive
-                      ? 'scale-x-100'
-                      : 'scale-x-0 group-hover:scale-x-100',
-                  )}
-                />
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="flex items-center gap-2">
-          {isSearchEnabled && <SearchButton />}
-
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/90 pt-[env(safe-area-inset-top)] backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-container items-center justify-between gap-4 px-4 lg:px-8">
           <Link
-            href="/account"
-            aria-label="User account"
-            className="flex size-10 items-center justify-center rounded-full text-text-primary transition-colors hover:bg-brand-blush"
+            href="/"
+            className="font-display text-3xl font-bold tracking-wide text-brand-primary italic"
           >
-            <User className="size-5" />
+            {branding.logoUrl ? (
+              <Image
+                src={branding.logoUrl}
+                alt={branding.siteName}
+                width={140}
+                height={40}
+                className="h-10 w-auto object-contain"
+                unoptimized
+              />
+            ) : (
+              branding.siteName
+            )}
           </Link>
 
-          <CartDrawer />
+          <nav
+            aria-label="Main navigation"
+            className="hidden items-center gap-8 md:flex"
+          >
+            {navLinks.map((link) => {
+              const isActive =
+                pathname === link.href ||
+                (link.href !== '/' && pathname.startsWith(link.href));
 
-          <MobileNavDrawer
-            links={navLinks}
-            siteName={branding.siteName}
-            isOpen={menuOpen}
-            onOpenChange={handleMenuOpenChange}
-          />
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    'group relative py-1 text-sm font-medium transition-colors duration-200',
+                    isActive
+                      ? 'text-brand-primary'
+                      : 'text-text-secondary hover:text-brand-primary',
+                  )}
+                >
+                  <span>{link.label}</span>
+                  <span
+                    className={cn(
+                      'absolute bottom-0 left-0 h-0.5 w-full origin-left bg-brand-primary transition-transform duration-300 ease-out',
+                      isActive
+                        ? 'scale-x-100'
+                        : 'scale-x-0 group-hover:scale-x-100',
+                    )}
+                  />
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex items-center gap-2">
+            {isSearchEnabled && <SearchButton />}
+
+            <Link
+              href="/account"
+              aria-label="User account"
+              className="flex size-10 items-center justify-center rounded-full text-text-primary transition-colors hover:bg-brand-blush"
+            >
+              <User className="size-5" />
+            </Link>
+
+            <CartDrawer />
+
+            <MobileNavDrawer
+              links={navLinks}
+              siteName={branding.siteName}
+              isOpen={menuOpen}
+              onOpenChange={handleMenuOpenChange}
+            />
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   );
 }

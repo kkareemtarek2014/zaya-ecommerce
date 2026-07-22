@@ -33,7 +33,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
             id={inputId}
             type="search"
             className={cn(
-              'h-11 w-full rounded-(--radius) border border-border bg-surface-raised py-2 pr-4 pl-10 text-sm text-text-primary',
+              'h-11 w-full rounded-(--radius) border border-border bg-surface-raised py-2 pr-4 pl-10 text-base text-text-primary sm:text-sm',
               'placeholder:text-text-muted',
               'focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20',
               'transition-colors',

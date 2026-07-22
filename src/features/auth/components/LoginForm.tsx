@@ -13,7 +13,7 @@ import { AuthIllustration } from './AuthIllustration';
 import { SocialAuthButtons } from './SocialAuthButtons';
 
 const inputCls =
-  'h-11 w-full rounded-(--radius) border border-border bg-surface-raised px-4 text-sm text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20';
+  'h-11 w-full rounded-(--radius) border border-border bg-surface-raised px-4 text-base text-text-primary placeholder:text-text-muted transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 sm:text-sm';
 
 export function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);

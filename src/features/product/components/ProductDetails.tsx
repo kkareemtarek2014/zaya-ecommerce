@@ -30,6 +30,13 @@ import { WishlistAlertControls } from '@/features/account';
 import { useFavoritesStore } from '@/shared/store/favorites.store';
 import { useHydrated } from '@/shared/hooks/useHydrated';
 
+const DESCRIPTION_COLLAPSE_CHARS = 180;
+
+function plainTextLength(htmlOrText: string): number {
+  return htmlOrText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    .length;
+}
+
 export function ProductDetails({ id }: { id: string }) {
   const { data: product, isLoading } = useProduct(id);
   const addItem = useCartStore((s) => s.addItem);
@@ -93,6 +100,22 @@ export function ProductDetails({ id }: { id: string }) {
 
   const price = product.price;
   const canAdd = product.inStock || Boolean(product.preorderAvailable);
+  const descriptionLong =
+    plainTextLength(product.description) > DESCRIPTION_COLLAPSE_CHARS;
+
+  const descriptionBody =
+    product.descriptionFormat === 'html' ? (
+      <div
+        className="prose-product leading-relaxed text-text-secondary [&_a]:text-brand-primary [&_a]:underline [&_li]:ml-4 [&_ol]:list-decimal [&_ul]:list-disc"
+        dangerouslySetInnerHTML={{
+          __html: sanitizeProductHtml(product.description),
+        }}
+      />
+    ) : (
+      <p className="leading-relaxed text-text-secondary">
+        {product.description}
+      </p>
+    );
 
   const handleAdd = () => {
     addItem(product, quantity);
@@ -106,6 +129,7 @@ export function ProductDetails({ id }: { id: string }) {
         <ProductGallery images={product.images} name={product.name} />
 
         <div className="flex flex-col gap-5">
+          {/* 1. Badges → name → rating → price */}
           <div className="flex flex-wrap items-center gap-2">
             {product.tags?.includes('best seller') && (
               <Badge tone="accent">Best Seller</Badge>
@@ -141,28 +165,7 @@ export function ProductDetails({ id }: { id: string }) {
             )}
           </div>
 
-          {product.descriptionFormat === 'html' ? (
-            <div
-              className="prose-product leading-relaxed text-text-secondary [&_a]:text-brand-primary [&_a]:underline [&_li]:ml-4 [&_ol]:list-decimal [&_ul]:list-disc"
-              dangerouslySetInnerHTML={{
-                __html: sanitizeProductHtml(product.description),
-              }}
-            />
-          ) : (
-            <p className="leading-relaxed text-text-secondary">
-              {product.description}
-            </p>
-          )}
-
-          {product.shippingEta ? (
-            <p className="flex items-center gap-2 text-sm text-text-secondary">
-              <Truck className="size-4 shrink-0 text-brand-primary" />
-              {product.shippingEta.startsWith('Ships')
-                ? product.shippingEta
-                : `Ships in ${product.shippingEta}`}
-            </p>
-          ) : null}
-
+          {/* 2. Add to bag (+ qty + wishlist) */}
           <div className="flex flex-wrap items-center gap-4 pt-2">
             {canAdd ? (
               <>
@@ -202,6 +205,32 @@ export function ProductDetails({ id }: { id: string }) {
             />
           </div>
 
+          {/* 3. Shipping ETA + COD / free-shipping trust */}
+          {product.shippingEta ? (
+            <p className="flex items-center gap-2 text-sm text-text-secondary">
+              <Truck className="size-4 shrink-0 text-brand-primary" />
+              {product.shippingEta.startsWith('Ships')
+                ? product.shippingEta
+                : `Ships in ${product.shippingEta}`}
+            </p>
+          ) : null}
+
+          <ul className="space-y-3 rounded-lg bg-brand-blush/60 p-5 text-sm text-text-secondary">
+            <li className="flex items-center gap-3">
+              <Truck className="size-4 shrink-0 text-brand-primary" />
+              Free shipping on orders over {formatEGP(freeShippingThreshold)}.
+            </li>
+            <li className="flex items-center gap-3">
+              <ShieldCheck className="size-4 shrink-0 text-brand-primary" />
+              Cash on delivery — pay only when it arrives.
+            </li>
+            <li className="flex items-center gap-3">
+              <Check className="size-4 shrink-0 text-brand-primary" />
+              Quality checked before it ships to you.
+            </li>
+          </ul>
+
+          {/* 4. Stock chrome */}
           {!product.inStock && !product.preorderAvailable ? (
             <NotifyMeForm productId={product.id} />
           ) : null}
@@ -225,22 +254,30 @@ export function ProductDetails({ id }: { id: string }) {
             </p>
           ) : null}
 
+          {/* 5. Bundle hints */}
           <ProductBundleHints productId={product.id} />
 
-          <ul className="mt-4 space-y-3 rounded-lg bg-brand-blush/60 p-5 text-sm text-text-secondary">
-            <li className="flex items-center gap-3">
-              <Truck className="size-4 shrink-0 text-brand-primary" />
-              Free shipping on orders over {formatEGP(freeShippingThreshold)}.
-            </li>
-            <li className="flex items-center gap-3">
-              <ShieldCheck className="size-4 shrink-0 text-brand-primary" />
-              Cash on delivery — pay only when it arrives.
-            </li>
-            <li className="flex items-center gap-3">
-              <Check className="size-4 shrink-0 text-brand-primary" />
-              Quality checked before it ships to you.
-            </li>
-          </ul>
+          {/* 6. Description (collapsible when long) */}
+          {descriptionLong ? (
+            <details className="group rounded-lg border border-border bg-surface-raised">
+              <summary className="cursor-pointer list-none px-4 py-3 font-medium text-text-primary marker:content-none [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center justify-between gap-2">
+                  Description
+                  <span
+                    className="text-text-muted transition-transform group-open:rotate-180"
+                    aria-hidden
+                  >
+                    ▾
+                  </span>
+                </span>
+              </summary>
+              <div className="border-t border-border px-4 py-3">
+                {descriptionBody}
+              </div>
+            </details>
+          ) : (
+            descriptionBody
+          )}
 
           <PdpWhatsAppCta
             productName={product.name}
@@ -249,6 +286,7 @@ export function ProductDetails({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* 7. Reviews → related → extras */}
       <ProductReviews productId={product.id} />
       <RelatedProducts currentId={product.id} category={product.category} />
       <NewArrivals />

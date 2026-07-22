@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Check, Copy, X } from 'lucide-react';
 import { useFeature } from '@/shared/contexts/FeatureContext';
+import { useBackButtonClose } from '@/shared/hooks/useBackButtonClose';
 import { WELCOME_OFFER } from '../welcome-offer.config';
 
 function isExcludedPath(pathname: string | null): boolean {
@@ -76,6 +77,8 @@ export function WelcomeOfferPopup() {
     };
   }, [open, dismiss]);
 
+  useBackButtonClose(open, dismiss);
+
   // Hide if the user navigates into an excluded flow while it is open.
   if (!open || isExcludedPath(pathname)) return null;
 
@@ -95,7 +98,7 @@ export function WelcomeOfferPopup() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center"
       role="presentation"
       onMouseDown={onBackdrop}
     >
@@ -112,7 +115,7 @@ export function WelcomeOfferPopup() {
             type="button"
             aria-label="Close welcome offer"
             onClick={dismiss}
-            className="absolute right-3 top-3 rounded-full p-1 text-text-secondary transition-colors hover:text-text-primary"
+            className="absolute right-3 top-3 flex size-11 items-center justify-center rounded-full text-text-secondary transition-colors hover:text-text-primary"
           >
             <X className="size-5" />
           </button>
