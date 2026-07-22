@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingBag, Trash2 } from 'lucide-react';
@@ -11,6 +10,7 @@ import { Button, Drawer, QuantityStepper } from '@/shared/components/ui';
 import { useHydrated } from '@/shared/hooks/useHydrated';
 import { markOverlayNavigation } from '@/shared/hooks/useBackButtonClose';
 import { CartRecommendations } from './CartRecommendations';
+import { CartCouponField } from './CartCouponField';
 import { FreeShippingProgress } from './FreeShippingProgress';
 import {
   selectCartCount,
@@ -31,9 +31,6 @@ export function CartDrawer() {
   const subtotal = useCartStore(selectCartSubtotal);
   const discount = useCartStore(selectCartDiscount);
   const total = useCartStore(selectCartTotal);
-  const couponCode = useCartStore((s) => s.couponCode);
-  const applyCoupon = useCartStore((s) => s.applyCoupon);
-  const removeCoupon = useCartStore((s) => s.removeCoupon);
   const setQuantity = useCartStore((s) => s.setQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
 
@@ -49,9 +46,6 @@ export function CartDrawer() {
     closeDrawer();
   };
 
-  const [couponInput, setCouponInput] = useState('');
-  const [couponError, setCouponError] = useState<string | null>(null);
-  const [couponOpen, setCouponOpen] = useState(false);
   const { data: storefrontConfig } = useStorefrontConfig();
   const freeShippingThreshold =
     storefrontConfig?.freeShippingThreshold ?? FREE_SHIPPING_THRESHOLD;
@@ -68,79 +62,7 @@ export function CartDrawer() {
           threshold={freeShippingThreshold}
         />
 
-        <div className="mb-4">
-          {couponCode ? (
-            <div className="flex items-center justify-between rounded-(--radius) bg-brand-blush px-3 py-2 text-sm">
-              <span className="font-medium text-brand-primary">
-                Code: {couponCode}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  removeCoupon();
-                  setCouponError(null);
-                }}
-                className="text-xs text-brand-secondary underline"
-              >
-                Remove
-              </button>
-            </div>
-          ) : couponOpen ? (
-            <div className="flex flex-col gap-1">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Coupon Code (e.g. WELCOME10)"
-                  value={couponInput}
-                  onChange={(e) => {
-                    setCouponInput(e.target.value);
-                    setCouponError(null);
-                  }}
-                  className="flex-1 rounded-(--radius) border border-border px-3 py-1.5 text-base outline-none focus:border-brand-primary sm:text-sm"
-                  aria-label="Coupon code"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    if (!couponInput) return;
-                    const res = await applyCoupon(couponInput);
-                    if (res.success) {
-                      setCouponInput('');
-                      setCouponError(null);
-                    } else {
-                      setCouponError(res.error || 'Invalid code');
-                    }
-                  }}
-                >
-                  Apply
-                </Button>
-              </div>
-              {couponError ? (
-                <p className="ml-1 text-xs text-status-error">{couponError}</p>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => {
-                  setCouponOpen(false);
-                  setCouponError(null);
-                  setCouponInput('');
-                }}
-                className="self-start text-xs text-text-muted underline"
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setCouponOpen(true)}
-              className="text-xs font-medium text-text-secondary underline underline-offset-2 hover:text-brand-primary"
-            >
-              Have a code?
-            </button>
-          )}
-        </div>
+        <CartCouponField className="mb-4" />
 
         <div className="mb-3 space-y-1 text-sm">
           <div className="flex items-center justify-between text-text-secondary">

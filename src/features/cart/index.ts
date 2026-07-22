@@ -14,3 +14,4 @@ export { CartRecommendationCard } from './components/CartRecommendationCard';
 export { FreeShippingProgress } from './components/FreeShippingProgress';
 export { useCartRecommendations } from './hooks/useCartRecommendations';
 export { OrderNote } from './components/OrderNote';
+export { CartCouponField } from './components/CartCouponField';

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +19,8 @@ import {
   selectCartDiscount,
   selectCartSubtotal,
   useCartStore,
+  type CartItem,
+  CartCouponField,
 } from '@/features/cart';
 import { usePlaceOrder } from '@/features/order/hooks/useOrders';
 import {
@@ -28,6 +31,34 @@ import {
   buildShippingPreviewConfig,
   getShippingCost,
 } from '../utils/shipping';
+
+function CheckoutOrderItems({ items }: { items: CartItem[] }) {
+  return (
+    <ul className="mt-4 space-y-4 border-b border-border pb-5">
+      {items.map((item) => (
+        <li key={item.productId} className="flex items-center gap-3">
+          <div className="relative size-14 shrink-0 overflow-hidden rounded-(--radius) bg-brand-blush">
+            <Image
+              src={item.image}
+              alt={item.name}
+              width={112}
+              height={112}
+              sizes="56px"
+              className="size-full object-cover"
+            />
+          </div>
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="line-clamp-2 font-medium">{item.name}</p>
+            <p className="text-text-muted">Qty {item.quantity}</p>
+          </div>
+          <span className="shrink-0 text-sm font-medium">
+            {formatEGP(item.unitPrice * item.quantity)}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const FIELD_ORDER: (keyof CheckoutFormValues)[] = [
   'paymentMethod',
@@ -305,9 +336,11 @@ export function CheckoutForm() {
         </section>
       </div>
 
-      {/* Desktop summary (aside) */}
-      <aside className="hidden h-fit rounded-lg border border-border bg-surface-raised p-6 lg:block">
+      {/* Order summary — items + totals (submit button desktop-only; mobile uses sticky bar) */}
+      <aside className="h-fit rounded-lg border border-border bg-surface-raised p-6 lg:sticky lg:top-24">
         <h2 className="font-display text-xl font-semibold">Order Summary</h2>
+        <CheckoutOrderItems items={items} />
+        <CartCouponField className="mt-4" />
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <dt className="text-text-secondary">Subtotal</dt>
@@ -315,7 +348,10 @@ export function CheckoutForm() {
           </div>
           {discount > 0 ? (
             <div className="flex justify-between text-status-success">
-              <dt>Discount</dt>
+              <dt>
+                Discount
+                {couponCode ? ` (${couponCode})` : ''}
+              </dt>
               <dd>-{formatEGP(discount)}</dd>
             </div>
           ) : null}
@@ -340,7 +376,7 @@ export function CheckoutForm() {
           type="submit"
           fullWidth
           size="lg"
-          className="mt-5"
+          className="mt-5 hidden lg:inline-flex"
           isLoading={placeOrder.isPending}
         >
           {submitLabel}
