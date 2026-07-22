@@ -28,7 +28,6 @@ export { PromoForm, type PromoFormSubmit } from './components/PromoForm';
 export { BundleForm, type BundleFormSubmit } from './components/BundleForm';
 export { HomepageBuilder } from './components/HomepageBuilder';
 export { HomepageBlockForm } from './components/HomepageBlockForm';
-export { StatCard } from './components/StatCard';
 export { SalesChart } from './components/SalesChart';
 export { RecentOrders } from './components/RecentOrders';
 export { LatestProducts } from './components/LatestProducts';

@@ -27,8 +27,10 @@ export function useAdminStats() {
   return useQuery({
     queryKey: adminOpsKeys.stats(),
     queryFn: () => adminStatsService.get(),
+    refetchInterval: 60_000,
   });
 }
+
 
 export function useOrdersNeedingAction(): number {
   const { data } = useAdminStats();
