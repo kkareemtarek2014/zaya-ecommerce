@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="biTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#149c90"/>
+      <stop offset="100%" stop-color="#0c7266"/>
+    </linearGradient>
+    <linearGradient id="biApricot" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7be7d"/>
+      <stop offset="100%" stop-color="#f2a65a"/>
+    </linearGradient>
+    <filter id="biShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#26343a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Central Mascot Icon -->
+  <g transform="translate(300, 25)" filter="url(#biShadow)">
+    <rect x="0" y="0" width="120" height="120" rx="32" fill="url(#biTeal)"/>
+    <path d="M 60 28 C 82 28, 98 40, 98 60 C 98 78, 82 92, 60 92 C 38 92, 22 78, 22 60 C 22 40, 38 28, 60 28 Z" fill="#ffffff"/>
+    <path d="M 44 54 C 44 50, 52 50, 52 54" fill="none" stroke="#26343a" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M 68 54 C 68 50, 76 50, 76 54" fill="none" stroke="#26343a" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M 56 63 Q 60 66 64 63" fill="none" stroke="#26343a" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="40" cy="59" rx="4.5" ry="2.5" fill="#f2a65a" opacity="0.6"/>
+    <ellipse cx="80" cy="59" rx="4.5" ry="2.5" fill="#f2a65a" opacity="0.6"/>
+  </g>
+
+  <!-- Left: English Wordmark "sqoosh" -->
+  <g transform="translate(30, 45)">
+    <!-- s -->
+    <path d="M 32 45 C 32 37, 8 32, 8 48 C 8 64, 33 58, 33 74 C 33 88, 7 85, 7 76" fill="none" stroke="#26343a" stroke-width="12" stroke-linecap="round"/>
+    <!-- q -->
+    <ellipse cx="56" cy="60" rx="12" ry="15" fill="none" stroke="#26343a" stroke-width="11"/>
+    <path d="M 68 45 L 68 88" fill="none" stroke="#26343a" stroke-width="11" stroke-linecap="round"/>
+    <!-- o (squished teal) -->
+    <ellipse cx="96" cy="60" rx="14" ry="9" fill="none" stroke="#129488" stroke-width="10"/>
+    <!-- o (squished apricot) -->
+    <ellipse cx="134" cy="60" rx="14" ry="9" fill="none" stroke="#f2a65a" stroke-width="10"/>
+    <!-- s -->
+    <path d="M 188 45 C 188 37, 164 32, 164 48 C 164 64, 189 58, 189 74 C 189 88, 163 85, 163 76" fill="none" stroke="#26343a" stroke-width="12" stroke-linecap="round"/>
+    <!-- h -->
+    <path d="M 205 32 L 205 88 M 205 58 C 205 46, 226 46, 226 60 L 226 88" fill="none" stroke="#26343a" stroke-width="11" stroke-linecap="round"/>
+  </g>
+
+  <!-- Right: Arabic Wordmark "سكوش" -->
+  <g transform="translate(450, 40)">
+    <!-- Arabic Calligraphic Chubby Typography for سكوش -->
+    <!-- ش (with 3 dots) -->
+    <path d="M 40 75 Q 40 90 55 90 Q 70 90 70 75 Q 70 90 85 90 Q 100 90 100 70" fill="none" stroke="#26343a" stroke-width="12" stroke-linecap="round"/>
+    <!-- 3 dots for ش in Apricot -->
+    <circle cx="55" cy="50" r="4" fill="#f2a65a"/>
+    <circle cx="70" cy="50" r="4" fill="#f2a65a"/>
+    <circle cx="62.5" cy="40" r="4" fill="#f2a65a"/>
+
+    <!-- و (waw - squished rounded loop) -->
+    <path d="M 115 65 C 105 55, 130 50, 135 65 L 130 92 C 120 100, 105 95, 105 95" fill="none" stroke="#129488" stroke-width="12" stroke-linecap="round"/>
+
+    <!-- ك (kaf) -->
+    <path d="M 155 45 L 155 75 Q 155 88 175 88 L 190 88" fill="none" stroke="#26343a" stroke-width="12" stroke-linecap="round"/>
+    <path d="M 165 58 L 180 50" fill="none" stroke="#26343a" stroke-width="9" stroke-linecap="round"/>
+
+    <!-- س (seen) -->
+    <path d="M 195 72 Q 202 85 210 72 Q 218 85 225 72 Q 235 90 245 72" fill="none" stroke="#26343a" stroke-width="12" stroke-linecap="round"/>
+  </g>
+
+  <!-- Bottom Tagline in both languages -->
+  <text x="360" y="175" font-family="'Nunito', 'Baloo Bhaijaan 2', sans-serif" font-size="15" font-weight="700" fill="#5d6b70" text-anchor="middle">
+    فرّغ توترك… بسكوشة &nbsp;•&nbsp; SQUEEZE THE STRESS AWAY
+  </text>
+</svg>

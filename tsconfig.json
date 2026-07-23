@@ -41,6 +41,7 @@
     ".open-next",
     ".wrangler",
     ".next/dev",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "vitest.config.ts"
   ]
 }

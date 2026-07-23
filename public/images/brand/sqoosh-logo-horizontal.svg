@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 180" width="100%" height="100%">
+  <defs>
+    <!-- Brand Color Palette Gradients -->
+    <linearGradient id="primaryTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#149c90"/>
+      <stop offset="100%" stop-color="#0c7266"/>
+    </linearGradient>
+
+    <linearGradient id="apricotGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f7be7d"/>
+      <stop offset="100%" stop-color="#f2a65a"/>
+    </linearGradient>
+    
+    <filter id="logoShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#26343a" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- Left: Mascot Icon Group -->
+  <g transform="translate(20, 15)" filter="url(#logoShadow)">
+    <!-- Mascot Outer Teal Squircle -->
+    <rect x="0" y="0" width="140" height="140" rx="36" fill="url(#primaryTeal)"/>
+    
+    <!-- Mascot Blob Body -->
+    <path d="M 70 34 C 95 34, 114 48, 114 70 C 114 90, 95 106, 70 106 C 45 106, 26 90, 26 70 C 26 48, 45 34, 70 34 Z" fill="#ffffff"/>
+    
+    <!-- Sleepy/Relaxed Eyes -->
+    <path d="M 52 64 C 52 59, 60 59, 60 64" fill="none" stroke="#26343a" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M 80 64 C 80 59, 88 59, 88 64" fill="none" stroke="#26343a" stroke-width="2.5" stroke-linecap="round"/>
+    
+    <!-- Smile -->
+    <path d="M 66 73 Q 70 76 74 73" fill="none" stroke="#26343a" stroke-width="2.2" stroke-linecap="round"/>
+    
+    <!-- Apricot Blush -->
+    <ellipse cx="47" cy="69" rx="5" ry="3" fill="#f2a65a" opacity="0.6"/>
+    <ellipse cx="93" cy="69" rx="5" ry="3" fill="#f2a65a" opacity="0.6"/>
+
+    <!-- Mini Sparkle -->
+    <path d="M 116 24 Q 116 30 122 30 Q 116 30 116 36 Q 116 30 110 30 Q 116 30 116 24 Z" fill="url(#apricotGradient)"/>
+  </g>
+
+  <!-- Right: Custom Chubby Wordmark "sqoosh" -->
+  <g transform="translate(180, 25)">
+    <!-- Letter 's' -->
+    <path d="M 45 52 C 45 42, 12 36, 12 56 C 12 76, 46 68, 46 90 C 46 110, 10 106, 10 94" 
+          fill="none" stroke="#26343a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Letter 'q' -->
+    <ellipse cx="80" cy="72" rx="17" ry="21" fill="none" stroke="#26343a" stroke-width="15"/>
+    <path d="M 97 51 L 97 114 C 97 114, 97 122, 105 120" fill="none" stroke="#26343a" stroke-width="15" stroke-linecap="round"/>
+
+    <!-- Letter 'o' (Squished #1 - Calm Teal) -->
+    <g transform="translate(132, 51)">
+      <!-- Squeezed Oval shape -->
+      <ellipse cx="24" cy="24" rx="22" ry="14" fill="none" stroke="#129488" stroke-width="14"/>
+      <!-- Tactile pressure arrows/dots above & below showing squish -->
+      <path d="M 24 0 L 24 4" stroke="#f2a65a" stroke-width="4" stroke-linecap="round"/>
+      <path d="M 24 44 L 24 48" stroke="#f2a65a" stroke-width="4" stroke-linecap="round"/>
+    </g>
+
+    <!-- Letter 'o' (Squished #2 - Warm Apricot) -->
+    <g transform="translate(196, 51)">
+      <!-- Squeezed Oval shape -->
+      <ellipse cx="24" cy="24" rx="22" ry="14" fill="none" stroke="#f2a65a" stroke-width="14"/>
+      <!-- Tactile pressure marks -->
+      <path d="M 24 0 L 24 4" stroke="#129488" stroke-width="4" stroke-linecap="round"/>
+      <path d="M 24 44 L 24 48" stroke="#129488" stroke-width="4" stroke-linecap="round"/>
+    </g>
+
+    <!-- Letter 's' -->
+    <path d="M 295 52 C 295 42, 262 36, 262 56 C 262 76, 296 68, 296 90 C 296 110, 260 106, 260 94" 
+          fill="none" stroke="#26343a" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Letter 'h' -->
+    <path d="M 318 36 L 318 102" fill="none" stroke="#26343a" stroke-width="15" stroke-linecap="round"/>
+    <path d="M 318 68 C 318 52, 348 52, 348 70 L 348 102" fill="none" stroke="#26343a" stroke-width="15" stroke-linecap="round"/>
+  </g>
+
+  <!-- Tagline below: SQUEEZE THE STRESS AWAY -->
+  <text x="365" y="148" 
+        font-family="'Nunito', 'Segoe UI', sans-serif" 
+        font-size="16" 
+        font-weight="800" 
+        letter-spacing="5" 
+        fill="#5d6b70" 
+        text-anchor="middle">
+    SQUEEZE THE STRESS AWAY
+  </text>
+</svg>
