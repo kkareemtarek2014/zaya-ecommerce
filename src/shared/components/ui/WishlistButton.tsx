@@ -1,6 +1,7 @@
 'use client';
 
 import { Heart } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/shared/utils/cn';
 import { useHydrated } from '@/shared/hooks/useHydrated';
 import { useFavoritesStore } from '@/shared/store/favorites.store';
@@ -27,11 +28,14 @@ export function WishlistButton({
   className,
 }: WishlistButtonProps) {
   const hydrated = useHydrated();
+  const router = useRouter();
+  const pathname = usePathname();
   const toggle = useFavoritesStore((s) => s.toggle);
   const ids = useFavoritesStore((s) => s.ids);
   const setIds = useFavoritesStore((s) => s.setIds);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const active = hydrated && ids.includes(productId);
+  const sessionChecked = useAuthStore((s) => s.sessionChecked);
+  const active = hydrated && isAuthenticated && ids.includes(productId);
 
   return (
     <button
@@ -45,15 +49,20 @@ export function WishlistButton({
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        toggle(productId);
-        if (isAuthenticated) {
-          const next = useFavoritesStore.getState().ids;
-          void syncFavoritesToServer(next)
-            .then(setIds)
-            .catch(() => {
-              /* local optimistic state kept */
-            });
+        // Wishlist is an account feature: guests must sign in first.
+        if (!isAuthenticated) {
+          if (!sessionChecked) return; // wait until session state is known
+          const redirect = encodeURIComponent(pathname || '/');
+          router.push(`/auth/login?redirect=${redirect}`);
+          return;
         }
+        toggle(productId);
+        const next = useFavoritesStore.getState().ids;
+        void syncFavoritesToServer(next)
+          .then(setIds)
+          .catch(() => {
+            /* local optimistic state kept */
+          });
       }}
       className={cn(
         'group/heart flex items-center justify-center transition-colors',

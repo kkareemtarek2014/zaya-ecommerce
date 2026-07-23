@@ -1,5 +1,7 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import { LoginForm } from '@/features/auth';
+import { Loader } from '@/shared/components/ui';
 
 export const metadata: Metadata = {
   title: 'Sign In',
@@ -7,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function LoginPage() {
-  return <LoginForm />;
+  return (
+    <Suspense fallback={<Loader fullscreen={false} className="p-8" />}>
+      <LoginForm />
+    </Suspense>
+  );
 }

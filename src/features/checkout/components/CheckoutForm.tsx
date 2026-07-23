@@ -1,12 +1,18 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Banknote, CreditCard, Smartphone } from 'lucide-react';
+import { Banknote, CreditCard, Smartphone, Sparkles } from 'lucide-react';
 import { formatEGP } from '@/shared/utils/price';
+import {
+  MEMBER_DISCOUNT_PERCENT,
+  computeMemberDiscount,
+} from '@/config/site.config';
+import { useAuthStore } from '@/features/auth/store/auth.store';
+import { useProfile, useAddresses } from '@/features/account';
 import {
   getGovernorate,
   GOVERNORATES,
@@ -95,6 +101,11 @@ export function CheckoutForm() {
   const { data: storefrontConfig } = useStorefrontConfig();
   const [formError, setFormError] = useState<string | null>(null);
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const sessionChecked = useAuthStore((s) => s.sessionChecked);
+  const { data: profile } = useProfile({ enabled: isAuthenticated });
+  const { data: addresses } = useAddresses({ enabled: isAuthenticated });
+
   const onlinePayments = Boolean(storefrontConfig?.onlinePayments);
 
   const previewConfig = useMemo(
@@ -106,11 +117,30 @@ export function CheckoutForm() {
     register,
     handleSubmit,
     watch,
+    reset,
+    getValues,
     formState: { errors },
   } = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: { paymentMethod: 'cod', governorate: '' },
   });
+
+  // Prefill delivery details from the signed-in customer's account (once).
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (prefilledRef.current || !isAuthenticated || !profile) return;
+    const addr = addresses?.[0];
+    reset({
+      paymentMethod: getValues('paymentMethod') || 'cod',
+      fullName: profile.fullName ?? '',
+      phone: profile.phone ?? '',
+      governorate: addr?.governorate ?? '',
+      city: addr?.city ?? '',
+      street: addr?.street ?? '',
+      notes: '',
+    });
+    prefilledRef.current = true;
+  }, [isAuthenticated, profile, addresses, reset, getValues]);
 
   const governorate = watch('governorate');
   const paymentMethod = watch('paymentMethod');
@@ -118,10 +148,10 @@ export function CheckoutForm() {
   const shipping = governorate
     ? getShippingCost(zone, subtotal, previewConfig)
     : null;
-  const total =
-    shipping === null
-      ? Math.max(0, subtotal - discount)
-      : Math.max(0, subtotal - discount) + shipping;
+  // Signed-in customers get an extra loyalty discount (enforced server-side too).
+  const memberDiscount = isAuthenticated ? computeMemberDiscount(subtotal) : 0;
+  const afterDiscounts = Math.max(0, subtotal - discount - memberDiscount);
+  const total = shipping === null ? afterDiscounts : afterDiscounts + shipping;
 
   if (!mounted) {
     return <CheckoutBodySkeleton />;
@@ -191,6 +221,33 @@ export function CheckoutForm() {
       noValidate
     >
       <div className="space-y-8">
+        {/* Guests: nudge to sign in for the extra member discount */}
+        {sessionChecked && !isAuthenticated ? (
+          <div className="flex flex-col gap-3 rounded-lg border border-brand-primary/30 bg-brand-blush/40 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Sparkles className="mt-0.5 size-5 shrink-0 text-brand-primary" />
+              <div>
+                <p className="text-sm font-semibold text-text-primary">
+                  Log in and save an extra {MEMBER_DISCOUNT_PERCENT}%
+                  {computeMemberDiscount(subtotal) > 0
+                    ? ` (−${formatEGP(computeMemberDiscount(subtotal))})`
+                    : ''}
+                </p>
+                <p className="text-xs text-text-secondary">
+                  Members get {MEMBER_DISCOUNT_PERCENT}% off this order — or keep
+                  going as a guest.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/auth/login?redirect=/checkout"
+              className="inline-flex shrink-0 items-center justify-center rounded-(--radius) bg-brand-primary px-4 py-2 text-sm font-semibold text-text-inverse transition-colors hover:bg-brand-secondary"
+            >
+              Log in &amp; save
+            </Link>
+          </div>
+        ) : null}
+
         {/* Payment first so COD explainer is visible on 375px without scrolling */}
         <section className="space-y-4">
           <h2 className="font-display text-xl font-semibold">Payment</h2>
@@ -353,6 +410,12 @@ export function CheckoutForm() {
                 {couponCode ? ` (${couponCode})` : ''}
               </dt>
               <dd>-{formatEGP(discount)}</dd>
+            </div>
+          ) : null}
+          {memberDiscount > 0 ? (
+            <div className="flex justify-between text-status-success">
+              <dt>Member discount ({MEMBER_DISCOUNT_PERCENT}%)</dt>
+              <dd>-{formatEGP(memberDiscount)}</dd>
             </div>
           ) : null}
           <div className="flex justify-between">

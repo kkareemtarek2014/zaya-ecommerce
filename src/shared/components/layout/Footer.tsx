@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { CATEGORIES } from '@/shared/data/categories.data';
 import type { SiteBrandingDTO } from '@/shared/contracts/storefront-branding.contract';
 import { SocialLinks } from './footer/SocialLinks';
@@ -32,9 +33,19 @@ export function Footer({ branding }: FooterProps) {
           {/* Brand & Newsletter Section */}
           <div className="flex flex-col gap-6 lg:col-span-5">
             <div>
-              <p className="font-display text-3xl font-bold tracking-tight text-brand-primary italic sm:text-4xl">
-                {branding.siteName}
-              </p>
+              <div className="flex items-center gap-3">
+                <Image
+                  src={branding.logoUrl || '/images/brand/sqoosh-icon.svg'}
+                  alt={branding.siteName}
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 object-contain drop-shadow-xs"
+                  unoptimized
+                />
+                <p className="font-display text-3xl font-bold tracking-tight text-brand-primary italic sm:text-4xl">
+                  {branding.siteName}
+                </p>
+              </div>
               <p className="mt-3 max-w-md text-sm leading-relaxed text-text-secondary sm:mt-4 sm:text-base">
                 {description}
               </p>

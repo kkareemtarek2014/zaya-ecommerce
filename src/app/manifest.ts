@@ -15,6 +15,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#129488',
     icons: [
       {
+        src: '/images/brand/sqoosh-icon.svg',
+        sizes: 'any',
+        type: 'image/svg+xml',
+        purpose: 'maskable',
+      },
+      {
         src: '/icon-192.png',
         sizes: '192x192',
         type: 'image/png',

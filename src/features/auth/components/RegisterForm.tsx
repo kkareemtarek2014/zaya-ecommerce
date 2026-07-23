@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -45,9 +46,19 @@ export function RegisterForm() {
   return (
     <div className="mx-auto w-full max-w-xl px-4 lg:px-0">
       <div className="flex flex-col gap-5 rounded-lg border border-border bg-surface-raised px-5 py-6 shadow-sm md:px-8">
-        <h1 className="w-full border-b border-border pb-5 text-center font-display text-2xl font-semibold text-text-primary">
-          Create Account
-        </h1>
+        <div className="flex w-full items-center justify-center gap-2.5 border-b border-border pb-5">
+          <Image
+            src="/images/brand/sqoosh-icon.svg"
+            alt="Sqoosh"
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+            unoptimized
+          />
+          <h1 className="font-display text-2xl font-semibold text-text-primary">
+            Create Account
+          </h1>
+        </div>
 
 
         {formError && (

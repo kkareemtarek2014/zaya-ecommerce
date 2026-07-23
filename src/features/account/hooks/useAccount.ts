@@ -17,11 +17,12 @@ export const accountKeys = {
   wallet: ['account', 'wallet'] as const,
 };
 
-export function useProfile() {
+export function useProfile(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: accountKeys.profile,
     queryFn: () => accountService.getProfile(),
     retry: false,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -36,11 +37,12 @@ export function useUpdateProfile() {
   });
 }
 
-export function useAddresses() {
+export function useAddresses(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: accountKeys.addresses,
     queryFn: () => accountService.listAddresses(),
     retry: false,
+    enabled: options?.enabled ?? true,
   });
 }
 

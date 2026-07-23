@@ -48,8 +48,11 @@ export async function generateMetadata(): Promise<Metadata> {
       canonical: '/',
     },
     icons: {
-      icon: branding.faviconUrl ?? '/icon-192.png',
-      apple: '/apple-touch-icon.png',
+      icon: [
+        { url: branding.faviconUrl || '/images/brand/sqoosh-icon.svg', type: 'image/svg+xml' },
+      ],
+      shortcut: branding.faviconUrl || '/images/brand/sqoosh-icon.svg',
+      apple: branding.faviconUrl || '/images/brand/sqoosh-icon.svg',
     },
     openGraph: {
       title: titleDefault,

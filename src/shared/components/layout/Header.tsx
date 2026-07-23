@@ -58,20 +58,17 @@ export function Header({ branding }: HeaderProps) {
         <div className="mx-auto flex h-16 max-w-container items-center justify-between gap-4 px-4 lg:px-8">
           <Link
             href="/"
-            className="font-display text-3xl font-bold tracking-wide text-brand-primary italic"
+            className="flex items-center gap-2.5 font-display text-2xl font-bold tracking-tight text-brand-primary italic hover:opacity-90 transition-opacity"
           >
-            {branding.logoUrl ? (
-              <Image
-                src={branding.logoUrl}
-                alt={branding.siteName}
-                width={140}
-                height={40}
-                className="h-10 w-auto object-contain"
-                unoptimized
-              />
-            ) : (
-              branding.siteName
-            )}
+            <Image
+              src={branding.logoUrl || '/images/brand/sqoosh-icon.svg'}
+              alt={branding.siteName}
+              width={36}
+              height={36}
+              className="h-9 w-9 object-contain drop-shadow-xs"
+              unoptimized
+            />
+            <span>{branding.siteName}</span>
           </Link>
 
           <nav

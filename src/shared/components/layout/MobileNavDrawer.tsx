@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -65,6 +66,20 @@ export function MobileNavDrawer({
         side="left"
       >
         <div id="mobile-nav-drawer" className="flex h-full flex-col">
+          <div className="mb-4 flex items-center gap-2.5 pb-2 border-b border-border">
+            <Image
+              src="/images/brand/sqoosh-icon.svg"
+              alt={siteName}
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain"
+              unoptimized
+            />
+            <span className="font-display text-xl font-bold italic text-brand-primary">
+              {siteName}
+            </span>
+          </div>
+
           <nav
             aria-label="Mobile navigation"
             className="flex flex-1 flex-col gap-1"

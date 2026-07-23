@@ -1,7 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,7 +20,13 @@ export function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const loginMutation = useLogin();
+
+  /** Only follow same-site paths to avoid open-redirect abuse. */
+  const redirectParam = searchParams.get('redirect');
+  const redirectTo =
+    redirectParam && redirectParam.startsWith('/') ? redirectParam : '/account';
 
   const {
     register,
@@ -31,7 +38,7 @@ export function LoginForm() {
     setFormError(null);
     try {
       await loginMutation.mutateAsync(values);
-      router.push('/account');
+      router.push(redirectTo);
     } catch (err) {
       setFormError(
         err instanceof AppError
@@ -51,9 +58,19 @@ export function LoginForm() {
         {/* Login card */}
         <div className="order-1 lg:order-1">
           <div className="flex h-full flex-col items-center gap-5 rounded-lg border border-border bg-surface-raised px-5 py-6 shadow-sm md:px-8">
-            <h1 className="w-full border-b border-border pb-5 text-center font-display text-2xl font-semibold text-text-primary">
-              Welcome Back
-            </h1>
+            <div className="flex w-full items-center justify-center gap-2.5 border-b border-border pb-5">
+              <Image
+                src="/images/brand/sqoosh-icon.svg"
+                alt="Sqoosh"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+                unoptimized
+              />
+              <h1 className="font-display text-2xl font-semibold text-text-primary">
+                Welcome Back
+              </h1>
+            </div>
 
             {formError && (
               <div className="w-full rounded-(--radius) border border-status-error/30 bg-status-error/10 p-3 text-center text-sm text-status-error">

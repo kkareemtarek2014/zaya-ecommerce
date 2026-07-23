@@ -6,6 +6,7 @@ import {
   type OrderDTO,
 } from '@/shared/contracts/order.contract';
 import { isFeatureEnabled } from '@/config/features.config';
+import { computeMemberDiscount } from '@/config/site.config';
 import { getRequestDb } from '@/server/db/request';
 import { products } from '@/server/db/schema';
 import {
@@ -178,6 +179,13 @@ export async function createOrder(
     })),
   );
   discount = Math.min(subtotal, discount + bundleResult.discount);
+
+  // Signed-in customers earn an extra loyalty discount (guests do not).
+  // Enforced here so the storefront preview can never be spoofed.
+  if (userId) {
+    const memberDiscount = computeMemberDiscount(subtotal);
+    discount = Math.min(subtotal, discount + memberDiscount);
+  }
 
   const shipping = await getShippingCost(
     db,

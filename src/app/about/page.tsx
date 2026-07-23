@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Metadata } from 'next';
 import { SITE } from '@/config/site.config';
 
@@ -31,16 +32,16 @@ export default function AboutPage() {
       </div>
 
       <div className="mt-16 grid gap-12 lg:grid-cols-2 lg:gap-8 items-center animate-fade-up" style={{ animationDelay: '100ms' }}>
-        <div className="relative aspect-square overflow-hidden rounded-lg bg-brand-blush">
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center text-brand-primary/40">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="size-32">
-              <circle cx="12" cy="12" r="10" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 14s1.5 2 4 2 4-2 4-2" />
-              <line x1="9" y1="9" x2="9.01" y2="9" />
-              <line x1="15" y1="9" x2="15.01" y2="9" />
-            </svg>
-            <span className="mt-4 font-display text-2xl font-bold tracking-widest text-brand-primary/40">Sqoosh</span>
-          </div>
+        <div className="relative aspect-square overflow-hidden rounded-2xl bg-brand-blush/60 p-12 flex flex-col items-center justify-center text-center shadow-inner">
+          <Image
+            src="/images/brand/sqoosh-icon.svg"
+            alt="Sqoosh Icon"
+            width={160}
+            height={160}
+            className="size-40 object-contain drop-shadow-md"
+            unoptimized
+          />
+          <span className="mt-4 font-display text-2xl font-bold tracking-widest text-brand-primary">Sqoosh</span>
         </div>
 
         <div className="space-y-8">

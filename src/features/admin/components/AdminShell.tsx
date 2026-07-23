@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -121,10 +122,18 @@ export function AdminSidebar({
         <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
           <Link
             href="/admin"
-            className="font-display text-xl font-bold italic text-brand-primary hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 font-display text-xl font-bold italic text-brand-primary hover:opacity-90 transition-opacity"
             onClick={onClose}
           >
-            Sqoosh Admin
+            <Image
+              src="/images/brand/sqoosh-icon.svg"
+              alt="Sqoosh"
+              width={28}
+              height={28}
+              className="h-7 w-7 object-contain"
+              unoptimized
+            />
+            <span>Sqoosh Admin</span>
           </Link>
           <button
             type="button"
